@@ -1,94 +1,64 @@
-<!--TEMPLATE EXAMPLE
-
-# TEMPLATE_GPL-3.0-or-later_Private
-**A high-fidelity media management and metadata enforcement suite for PowerShell 7.6.1 LTS.**
+# <img src="VolumeSpan_internal/icons/volumespan_cd_icon.svg" width="32" height="32"> VolumeSpan™ <img src="VolumeSpan_internal/icons/volumespan_cd_icon.svg" width="32" height="32">
+**An automated optical disc backup staging utility utilizing native NTFS hardlinks.**
 
 ---
-
 
 ## Overview
-MKVMetadataAuditor+Fixer is a high-performance automation suite built for media archivists who prioritize metadata integrity and container consistency. Designed to handle the complexities of large-scale libraries, the script acts as both a vigilant auditor and a precision repair tool. It eliminates the manual labor of checking track flags, language tags, and track titles by enforcing a standardized configuration across your collection. By identifying discrepancies in audio and subtitle tracks, it ensures that your media is always configured for your preferred playback experience.
+VolumeSpan™ is a backup staging application designed to partition large local directory trees sequentially into fixed-capacity optical disc volumes (e.g., **BD-0001**, **BD-0002**) using native NTFS hardlinks. It allows you to organize data for optical burning—such as BDXL, BD-R, DVD, and CD media—without duplicating files or consuming additional hard drive space.
 
-## Technical Logic
-The script employs a dual-engine approach to process files—handling Anime and Western media with specialized audit logic—and utilizes a customizable JSON-based defaults system to resolve metadata errors automatically. It features a robust gatekeeper engine that allows users to exclude specific directories via a switch-enabled (`-ep`) text-based bypass. With direct integration with `mkvpropedit`, the tool provides granular control over MKV headers, allowing for the batch correction of language codes and default/forced track flags without the need for full file remuxing.
+**Primary Environment:** Developed and tested on **Python 3.14.5** using the **PyQt6** framework. It is intended for archivists and system administrators who require deterministic volume splitting, multi-tier fallback capacity management, and zero-footprint staging.
 
-## Usage Examples
-```powershell
-# Standard Audit (No Changes)
-.\MKVMetadataAuditor+Fixer.ps1 -Path 'G:\Media\Anime'
+### The Staging & Partitioning Engine
+The utility leverages a sequential bin-packing algorithm paired with NTFS filesystem hardlinks.
 
-# Automated Fix (JPN Audio / ENG Subs / Honorifics)
-.\MKVMetadataAuditor+Fixer.ps1 -Fix -aud jpn -sub eng -Hon -ovrd -Path 'G:\Media\Anime'
+Key operational features include:
+1. **Zero Storage Duplication:** Staged disc volume directories are populated using native NTFS hardlinks (`os.link`), which point directly to the underlying file data on disk without consuming additional physical storage space.
+2. **Multi-Tier Media Fallbacks:** Configure a primary media target (such as BDXL 128 GB) alongside up to three smaller fallback tiers (such as BD-R 25 GB or DVD-9). When the final tail volume or small initial dataset fits within a smaller tier, VolumeSpan™ automatically steps down the disc size to conserve higher-capacity media.
+3. **Deterministic Sequential Partitioning:** Files are processed and allocated in strict directory and alphabetical order. This ensures predictable volume spans and simple restoration (copying discs sequentially back into a single folder).
+4. **Interactive Simulation (Dry Run):** Runs an in-depth simulation displaying an interactive tree view of every disc volume, relative paths, file sizes, media types, and capacity fill percentages before any directories or hardlinks are created.
+5. **Safe Staging Target Cleanup:** Includes a specialized cleanup utility that traverses staging targets bottom-up, verifying that file link counts are greater than 1 (`st_nlink > 1`) before unlinking. Standalone, non-hardlinked files (`st_nlink == 1`) are strictly preserved to prevent accidental data loss.
+6. **Robust Volume & Path Validation:** Enforces strict validation to prevent staging inside the source directory, blocks cross-volume partitioning, and prevents operations across network shares (UNC paths) and mapped network drives.
 
-# Update Video Language (Chinese) & Save to Config
-.\MKVMetadataAuditor+Fixer.ps1 -Fix -vid chi -vidf -ovrd -Path 'G:\Media\Anime'
-
-# Direct Fix (No Backup) with Codec Priority
-.\MKVMetadataAuditor+Fixer.ps1 -Fix -FixNoBackup -sc 'ass,srt' -ovrd -Path 'G:\Media\Anime'
-
-# AVC High 10 Deep Scan Library Sweep (Fast Mode)
-.\MKVMetadataAuditor+Fixer.ps1 -h10p -fast -Path 'G:\Media\Anime'
-```
 ---
 
-## Parameter Reference
+## Feature Reference
 
-### Core Flags
-| Flag | Description |
+| Option | Description |
 | :--- | :--- |
-| `-Path <string>` | Defines the target directory for recursive scanning. |
-| `-Fix` | Enables **Write Mode**. Without this, the script runs in read-only audit mode. |
-| `-FixDebug` | Prints the exact `mkvpropedit` command strings before execution and displays subtitle scoring logic—ideal for verifying complex changes. |
-| `-FixNoBackup` | Overwrites metadata directly on source files (disables `_updated` folder). |
-| `-overrideDefaults \| -ovrd` | **Mandatory** when using automation flags to save parameters to the JSON config. |
+| **Disc ID Tracking** | Defines the starting label (e.g., `BD-0001`) and automatically increments numerical suffixes across volumes while displaying the last generated ID. |
+| **Primary Media Ceiling** | Sets the maximum disc capacity preset (BDXL QL/TL, BD-R DL/SL, DVD-9/5, CD-R) or allows custom GiB ceilings with UDF filesystem safety margins. |
+| **Multi-Tier Fallbacks** | Configures up to three fallback media tiers with custom capacity thresholds for automated tail-volume optimization. |
+| **Dry Run Simulation** | Scans source folders and opens an interactive report detailing volume counts, disc fill percentages, and individual file distributions. |
+| **Hardlink Backup Generation** | Instantly constructs the disc directory hierarchy and NTFS hardlinks in the staging folder for direct burning. |
+| **Clean Staging Target** | Safely removes generated staging folders and unlinks hardlink copies while protecting original standalone files. |
+| **Theme Engine** | Supports Dark, Light, and System-synced UI modes via a custom QPalette implementation. |
 
-### Mode & Search Flags
-| Flag | Description |
-| :--- | :--- |
-| `-Western \| -w \| -west \| -WesternMode` | Sets defaults for Western media (English audio/subs). |
-| `-AvcHigh10Search \| -h10p` | **Search Mode:** Scans specifically for AVC High 10 (10-bit) video streams. |
-| `-AvcHigh10SearchDebug \| -h10pDebug` | Enables verbose terminal output during the High 10 search. |
-| `-fast` | Speeds up the High 10 search by skipping extended metadata checks. |
-| `-LogFullPath \| -lfp` | Forces the log to write the full file path instead of just the folder path during a fast AVC High 10 search. Requires -fast. |
-| `-disableRecurse \| -nr` | **No-Recurse:** Disables subfolder scanning; only processes the root path. |
+---
 
-### Track Priorities & Automation
-| Flag | Description |
-| :--- | :--- |
-| `-videoLanguage \| -vid <string>` | Targets the video track language (3-letter ISO code). |
-| `-videoForceUpdate \| -vidf` | **Safety Toggle:** Confirms video language changes on files that otherwise pass audit. |
-| `-audioLanguageUpdate \| -audf` | **Safety Toggle:** Confirms audio language changes on files that otherwise pass audit. |
-| `-audioLanguagePriority \| -aud <string>` | Sets primary audio language (e.g., 'jpn') and sets it as 'Default'. |
-| `-subtitleLanguagePriority \| -sub <string>` | Sets primary subtitle language. Uses weighted scoring for best dialogue track. |
-| `-subtitleCodecPriority \| -sc <string>` | Comma-separated list (e.g., 'ass,srt') to dictate subtitle format preference. |
-| `-Honorifics \| -Hon` | Injects a **+300 score bonus** to tracks labeled 'honorifics' or 'enm'. |
-| `-SubtitleFactorTrackOrder \| -SFTO \| -SubTrackOrder \| -TrackOrder` | Instructs the weighted scoring algorithm to factor in the physical track placement when determining priorities for subtitle selection. |
-| `-FansubGroupPriority \| -fg <string>` | Sets preferred fansub groups for subtitle track prioritization (e.g., `-fg 'commie'`). Pass an empty string (`""`) to clear preferences via CLI. |
-| `-SubtitlesHearingImpaired \| -sdh \| -hi \| -hicc \| -cc` | Prioritizes 'Hearing Impaired' or 'SDH' subtitle tracks (Western Mode). |
-| `-OverrideWesternDefaults \| -ovrdw` | Allows the script to save custom Western mode parameters to the JSON configuration. |
+## Assets & Licensing
+This software is released under the **GNU General Public License v3**.
 
-### Advanced & Log Management Flags
-| Flag | Description |
-| :--- | :--- |
-| `-VerifyUpdates \| -V \| -Verify` | Chains an automated second-pass verification audit immediately after fixing to confirm metadata integrity. Requires `-Fix`. |
-| `-help \| -manual` | Displays the internal help manual. |
-| `-DelLog` | Clears all historically accumulated files within the logs directory before starting operations. |
-| `-ClearDefaults \| -clr` | Deletes the saved Anime configuration JSON template to reset rules back to factory conditions. |
-| `-ClearWesternDefaults \| -clrw` | Deletes the custom Western configuration file to purge specialized rules. |
-| `-ClearAllDefaults \| -cla` | Total system purge of both Anime and Western configuration JSON structures. |
-| `-excludePaths \| -ep` | Enables the directory suppression exclusion engine (`MKVMetadataAuditor+Fixer__Excluded-Paths.txt`). |
-| `-Version \| -Ver` | Displays the script's current version number and exits immediately. |
+### Icon Credits
+* **File:** `volumespan_cd_icon.svg`
+    * **Asset:** Compact Disc Cd SVG Vector
+    * **Source:** <a href="https://www.svgrepo.com/svg/224282/compact-disc-cd" target="_blank">https://www.svgrepo.com/svg/224282/compact-disc-cd</a>
+    * **License:** <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank">CC0 License</a>
+    * **Modifications:** Modified by pwshAgyjkcrg761.
 
 ---
 
 ## Dependencies
-* **MKVToolNix:** Required for header probing (`mkvmerge`) and metadata editing (`mkvpropedit`).
-* **MediaInfo:** Required for video profile verification during AVC High 10 searches.
-
-TEMPLATE EXAMPLE-->
+* **OS:** Microsoft Windows 10 / 11 (NTFS file system required).
+* **Python:** 3.14.5+ (Recommended).
+* **PyQt6:** Required for the Graphical User Interface.
 
 ## Support & Maintenance
-**This repository is provided "as-is" for archival purposes.** I am not actively looking for feedback, feature requests, or bug reports. The issue tracker is disabled, and I will not be responding to inquiries regarding setup or usage.
+**This repository is provided "as-is" for archival purposes.** The author is not actively looking for feedback, feature requests, or bug reports. The issue tracker is disabled.
 
 ## Disclaimer
-*This script modifies MKV file headers and metadata. While designed for safety, always ensure you have backups of your media before running batch operations. The author is not responsible for any accidental data loss or corruption resulting from the use of this tool.*
+*VolumeSpan™ is a backup staging utility. The author is not responsible for data loss resulting from filesystem errors, media degradation, or improper disc burning practices. Always verify backup disc integrity after burning.*
+
+---
+> **Document Control**<br>
+> *This document is up-to-date with the following version of VolumeSpan™.*<br>
+> *2026.09.01__10.53.22*
