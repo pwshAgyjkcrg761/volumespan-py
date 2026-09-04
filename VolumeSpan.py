@@ -1,6 +1,6 @@
 # ==============================================================================
 # SCRIPT: VolumeSpan.py
-# VERSION: 2026.09.01__10.53.22
+# VERSION: 2026.09.04__08.40.53
 # TARGET: Python 3.14.5
 #
 # Copyright (C) 2026 pwshAgyjkcrg761
@@ -76,7 +76,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTextBrowser, QDialogButtonBox, QTreeWidget, QTreeWidgetItem)
 from PyQt6.QtGui import QActionGroup, QPalette, QColor, QIcon
 
-APP_VERSION = "2026.09.01__10.53.22"
+APP_VERSION = "2026.09.04__08.40.53"
 
 def increment_disc_id(disc_id: str) -> str:
     match = re.search(r'(.*?)(\d+)$', disc_id)
@@ -503,9 +503,52 @@ class VolumeSpanApp(QMainWindow):
         summary_label = QLabel(f"Total Discs: {len(discs)} | Total Data: {total_bytes / (1024**3):.2f} GiB")
         d_layout.addWidget(summary_label)
 
+        def save_index():
+            if len(discs) == 1:
+                suggested_filename = f"{discs[0]['label']}.txt"
+            else:
+                suggested_filename = f"{discs[0]['label']} - {discs[-1]['label']}.txt"
+
+            default_save_path = os.path.join(self.target_directory, suggested_filename)
+            file_path, _ = QFileDialog.getSaveFileName(
+                dialog, "Save Index Report", default_save_path, "Text Files (*.txt);;All Files (*)"
+            )
+            if not file_path:
+                return
+
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write("=" * 80 + "\n")
+                    f.write("VOLUMESPAN INDEX REPORT\n")
+                    f.write(f"Total Discs: {len(discs)} | Total Data: {total_bytes / (1024**3):.2f} GiB\n")
+                    f.write(f"Source: {self.source_directory}\n")
+                    f.write(f"Staging Target: {self.target_directory}\n")
+                    f.write("=" * 80 + "\n\n")
+
+                    for d in discs:
+                        pct = (d["size"] / d["ceiling"]) * 100 if d["ceiling"] > 0 else 0.0
+                        media_name = self._get_media_name_from_ceiling(d["ceiling"])
+                        f.write(f"[{d['label']}] - {media_name} ({d['size'] / (1024**3):.2f} GiB / {d['ceiling'] / (1024**3):.2f} GiB, {pct:.1f}% filled, {len(d['files'])} files)\n")
+                        f.write("-" * 80 + "\n")
+                        for rel_path, _, fsize in d["files"]:
+                            f.write(f"  {rel_path} ({fsize / (1024**2):.2f} MiB)\n")
+                        f.write("\n")
+
+                QMessageBox.information(dialog, "Index Saved", f"Index report successfully saved to:\n{file_path}")
+            except Exception as e:
+                QMessageBox.critical(dialog, "Error Saving Index", f"An error occurred while saving the index report:\n{e}")
+
+        btn_layout = QHBoxLayout()
+        btn_save_index = QPushButton("Save As Index")
+        btn_save_index.clicked.connect(save_index)
+        btn_layout.addWidget(btn_save_index)
+        btn_layout.addStretch()
+
         btn_close = QPushButton("Close Report")
         btn_close.clicked.connect(dialog.accept)
-        d_layout.addWidget(btn_close, alignment=Qt.AlignmentFlag.AlignRight)
+        btn_layout.addWidget(btn_close)
+
+        d_layout.addLayout(btn_layout)
 
         dialog.exec()
 
@@ -820,13 +863,14 @@ class VolumeSpanApp(QMainWindow):
             f"<div class='step-card'><b>1. Select Source:</b> Choose the local folder tree you wish to split and archive.</div>"
             f"<div class='step-card'><b>2. Select Staging Target:</b> Pick an output folder on the <b>same local drive volume</b> to store the generated disc structures.</div>"
             f"<div class='step-card'><b>3. Configure Media & Fallbacks:</b> Choose your primary media preset and optional fallback tiers for tail volumes, or define custom GiB ceilings.</div>"
-            f"<div class='step-card'><b>4. Run Simulation:</b> Click <b>'Run Simulation (Dry Run)'</b> to view a detailed allocation breakdown of discs and media sizes before writing.</div>"
+            f"<div class='step-card'><b>4. Run Simulation & Export Index:</b> Click <b>'Run Simulation (Dry Run)'</b> to view a detailed allocation breakdown of discs and media sizes before writing. Click <b>'Save As Index'</b> to export a formatted text index file of the disc set.</div>"
             f"<div class='step-card'><b>5. Generate Hardlinks:</b> Click <b>'Generate Hardlink Backup Trees'</b> to assemble zero-byte staging folders ready for disc authoring.</div>"
             f"<div class='step-card'><b>6. Clean Staging:</b> Click <b>'Clean Staging Target (Remove Hardlinks)'</b> to safely delete staging trees after burning. Non-hardlinked files are preserved.</div>"
             f"<h2>CORE FEATURES</h2>"
             f"<p><b>Multi-Tier Media Fallbacks:</b> Automatically steps down the final volume (or small archives) to smaller optical formats to conserve media.</p>"
             f"<p><b>Zero Storage Duplication:</b> Utilizes native NTFS hardlinks so staging folders consume zero extra storage space on your drive.</p>"
             f"<p><b>Deterministic Sequential Splits:</b> Preserves alphabetical and directory order across disc volumes for straightforward data restoration.</p>"
+            f"<p><b>Index Report Export:</b> Generates structured text index reports detailing the exact disc allocation and file paths across the entire backup set.</p>"
             f"<h2>DEPENDENCIES</h2>"
             f"<p><b>Python:</b> Built with Python 3.14.5.</p>"
             f"<p><b>PyQt6:</b> Orchestrates the graphical user interface.</p>"
