@@ -15,7 +15,7 @@ Key operational features include:
 1. **Zero Storage Duplication:** Staged disc volume directories are populated using native NTFS hardlinks (`os.link`), which point directly to the underlying file data on disk without consuming additional physical storage space.
 2. **Multi-Tier Media Fallbacks:** Configure a primary media target (such as BDXL 128 GB) alongside up to three smaller fallback tiers (such as BD-R 25 GB or DVD-9). When the final tail volume or small initial dataset fits within a smaller tier, VolumeSpan™ automatically steps down the disc size to conserve higher-capacity media.
 3. **Deterministic Sequential Partitioning:** Files are processed and allocated in strict directory and alphabetical order. This ensures predictable volume spans and simple restoration (copying discs sequentially back into a single folder).
-4. **Interactive Simulation (Dry Run):** Runs an in-depth simulation displaying an interactive tree view of every disc volume, relative paths, file sizes, media types, and capacity fill percentages before any directories or hardlinks are created.
+4. **Interactive Simulation & Index Export:** Runs an in-depth simulation displaying an interactive tree view of every disc volume, relative paths, file sizes, media types, and capacity fill percentages before staging. Includes a **Save As Index** feature to export a formatted `.txt` report of the partitioned disc structures with suggested disc ID ranges.
 5. **Safe Staging Target Cleanup:** Includes a specialized cleanup utility that traverses staging targets bottom-up, verifying that file link counts are greater than 1 (`st_nlink > 1`) before unlinking. Standalone, non-hardlinked files (`st_nlink == 1`) are strictly preserved to prevent accidental data loss.
 6. **Robust Volume & Path Validation:** Enforces strict validation to prevent staging inside the source directory, blocks cross-volume partitioning, and prevents operations across network shares (UNC paths) and mapped network drives.
 
@@ -28,7 +28,7 @@ Key operational features include:
 | **Disc ID Tracking** | Defines the starting label (e.g., `BD-0001`) and automatically increments numerical suffixes across volumes while displaying the last generated ID. |
 | **Primary Media Ceiling** | Sets the maximum disc capacity preset (BDXL QL/TL, BD-R DL/SL, DVD-9/5, CD-R) or allows custom GiB ceilings with UDF filesystem safety margins. |
 | **Multi-Tier Fallbacks** | Configures up to three fallback media tiers with custom capacity thresholds for automated tail-volume optimization. |
-| **Dry Run Simulation** | Scans source folders and opens an interactive report detailing volume counts, disc fill percentages, and individual file distributions. |
+| **Dry Run Simulation & Index** | Scans source folders, opens an interactive report detailing volume counts and file allocations, and allows exporting structured index text files (`.txt`) of the disc set. |
 | **Hardlink Backup Generation** | Instantly constructs the disc directory hierarchy and NTFS hardlinks in the staging folder for direct burning. |
 | **Clean Staging Target** | Safely removes generated staging folders and unlinks hardlink copies while protecting original standalone files. |
 | **Theme Engine** | Supports Dark, Light, and System-synced UI modes via a custom QPalette implementation. |
@@ -61,4 +61,4 @@ This software is released under the **GNU General Public License v3**.
 ---
 > **Document Control**<br>
 > *This document is up-to-date with the following version of VolumeSpan™.*<br>
-> *2026.09.01__10.53.22*
+> *2026.09.04__08.40.53*
