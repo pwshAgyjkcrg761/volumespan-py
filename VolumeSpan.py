@@ -1,6 +1,6 @@
 # ==============================================================================
 # SCRIPT: VolumeSpan.py
-# VERSION: 2026.09.04__08.40.53
+# VERSION: 2026.09.05__08.56.34
 # TARGET: Python 3.14.5
 #
 # Copyright (C) 2026 pwshAgyjkcrg761
@@ -72,11 +72,11 @@ import ctypes
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QPushButton, QFileDialog, QLineEdit, QLabel, 
-                             QMessageBox, QDialog, QComboBox, QDoubleSpinBox,
+                             QMessageBox, QDialog, QComboBox, QDoubleSpinBox, QSpinBox,
                              QTextBrowser, QDialogButtonBox, QTreeWidget, QTreeWidgetItem)
 from PyQt6.QtGui import QActionGroup, QPalette, QColor, QIcon
 
-APP_VERSION = "2026.09.04__08.40.53"
+APP_VERSION = "2026.09.05__08.56.34"
 
 def increment_disc_id(disc_id: str) -> str:
     match = re.search(r'(.*?)(\d+)$', disc_id)
@@ -125,7 +125,7 @@ class VolumeSpanApp(QMainWindow):
             self.setWindowIcon(app_icon)
             QApplication.setWindowIcon(app_icon)
             
-        self.default_size = (680, 368)
+        self.default_size = (840, 380)
         
         self.settings = SettingsWrapper(self.config_file)
         self.load_geometry()
@@ -185,73 +185,220 @@ class VolumeSpanApp(QMainWindow):
         media_items = [
             "BDXL QL (128 GB)", "BDXL TL (100 GB)", "BD-R DL (50 GB)", 
             "BD-R SL (25 GB)", "DVD-9 (8.5 GB)", "DVD-5 (4.7 GB)", 
-            "Mini DVD-R (1.4 GB)", "CD-R (700 MB)", "Mini CD-R (210 MB)", "Custom Size"
+            "Mini DVD-R (1.4 GB)", "CD-R (700 MB)", "Mini CD-R (210 MB)", 
+            "USB Flash Drive", "Custom Size"
         ]
         fallback_items = ["None (Disabled)"] + media_items
 
         # Primary Media
         cap_layout = QHBoxLayout()
-        cap_layout.addWidget(QLabel("Primary Media:"))
+        lbl_pri = QLabel("Primary Media:")
+        lbl_pri.setFixedWidth(110)
+        cap_layout.addWidget(lbl_pri)
         self.combo_primary_media = QComboBox()
         self.combo_primary_media.addItems(media_items)
-        self.combo_primary_media.currentIndexChanged.connect(self.primary_media_changed)
+        self.combo_primary_media.setFixedWidth(180)
         cap_layout.addWidget(self.combo_primary_media)
+
+        lbl_nom = QLabel("Nominal:")
+        lbl_nom.setFixedWidth(55)
+        cap_layout.addWidget(lbl_nom)
+        self.spin_nominal = QDoubleSpinBox()
+        self.spin_nominal.setRange(0.1, 999999.0)
+        self.spin_nominal.setDecimals(1)
+        self.spin_nominal.setValue(128.0)
+        self.spin_nominal.setFixedWidth(75)
+        self.spin_nominal.setEnabled(False)
+        cap_layout.addWidget(self.spin_nominal)
+
+        self.combo_unit = QComboBox()
+        self.combo_unit.addItems(["GB", "MB"])
+        self.combo_unit.setFixedWidth(55)
+        self.combo_unit.setEnabled(False)
+        cap_layout.addWidget(self.combo_unit)
         
-        cap_layout.addWidget(QLabel("Ceiling (GiB):"))
+        lbl_ceil = QLabel("Ceiling (GiB):")
+        lbl_ceil.setFixedWidth(75)
+        cap_layout.addWidget(lbl_ceil)
         self.spin_ceiling = QDoubleSpinBox()
-        self.spin_ceiling.setRange(0.1, 1000.0)
+        self.spin_ceiling.setRange(0.01, 10000.0)
         self.spin_ceiling.setDecimals(2)
         self.spin_ceiling.setValue(118.00)
+        self.spin_ceiling.setFixedWidth(75)
         cap_layout.addWidget(self.spin_ceiling)
+
+        lbl_lim = QLabel("Limit (0=∞):")
+        lbl_lim.setFixedWidth(75)
+        cap_layout.addWidget(lbl_lim)
+        self.spin_limit = QSpinBox()
+        self.spin_limit.setRange(0, 9999)
+        self.spin_limit.setValue(0)
+        self.spin_limit.setFixedWidth(60)
+        cap_layout.addWidget(self.spin_limit)
+        cap_layout.addStretch()
         layout.addLayout(cap_layout)
 
         # Fallback 1
         fb1_layout = QHBoxLayout()
-        fb1_layout.addWidget(QLabel("Fallback 1 Media:"))
+        lbl_fb1 = QLabel("Fallback 1 Media:")
+        lbl_fb1.setFixedWidth(110)
+        fb1_layout.addWidget(lbl_fb1)
         self.combo_fb1_media = QComboBox()
         self.combo_fb1_media.addItems(fallback_items)
-        self.combo_fb1_media.currentIndexChanged.connect(lambda idx: self.fallback_changed(idx, self.spin_fb1_ceiling))
+        self.combo_fb1_media.setFixedWidth(180)
         fb1_layout.addWidget(self.combo_fb1_media)
+
+        lbl_fb1_nom = QLabel("Nominal:")
+        lbl_fb1_nom.setFixedWidth(55)
+        fb1_layout.addWidget(lbl_fb1_nom)
+        self.spin_fb1_nominal = QDoubleSpinBox()
+        self.spin_fb1_nominal.setRange(0.1, 999999.0)
+        self.spin_fb1_nominal.setDecimals(1)
+        self.spin_fb1_nominal.setValue(100.0)
+        self.spin_fb1_nominal.setFixedWidth(75)
+        self.spin_fb1_nominal.setEnabled(False)
+        fb1_layout.addWidget(self.spin_fb1_nominal)
+
+        self.combo_fb1_unit = QComboBox()
+        self.combo_fb1_unit.addItems(["GB", "MB"])
+        self.combo_fb1_unit.setFixedWidth(55)
+        self.combo_fb1_unit.setEnabled(False)
+        fb1_layout.addWidget(self.combo_fb1_unit)
         
-        fb1_layout.addWidget(QLabel("Ceiling (GiB):"))
+        lbl_fb1_ceil = QLabel("Ceiling (GiB):")
+        lbl_fb1_ceil.setFixedWidth(75)
+        fb1_layout.addWidget(lbl_fb1_ceil)
         self.spin_fb1_ceiling = QDoubleSpinBox()
-        self.spin_fb1_ceiling.setRange(0.1, 1000.0)
+        self.spin_fb1_ceiling.setRange(0.01, 10000.0)
         self.spin_fb1_ceiling.setDecimals(2)
         self.spin_fb1_ceiling.setValue(93.00)
+        self.spin_fb1_ceiling.setFixedWidth(75)
         fb1_layout.addWidget(self.spin_fb1_ceiling)
+
+        lbl_fb1_lim = QLabel("Limit (0=∞):")
+        lbl_fb1_lim.setFixedWidth(75)
+        fb1_layout.addWidget(lbl_fb1_lim)
+        self.spin_fb1_limit = QSpinBox()
+        self.spin_fb1_limit.setRange(0, 9999)
+        self.spin_fb1_limit.setValue(0)
+        self.spin_fb1_limit.setFixedWidth(60)
+        fb1_layout.addWidget(self.spin_fb1_limit)
+        fb1_layout.addStretch()
         layout.addLayout(fb1_layout)
 
         # Fallback 2
         fb2_layout = QHBoxLayout()
-        fb2_layout.addWidget(QLabel("Fallback 2 Media:"))
+        lbl_fb2 = QLabel("Fallback 2 Media:")
+        lbl_fb2.setFixedWidth(110)
+        fb2_layout.addWidget(lbl_fb2)
         self.combo_fb2_media = QComboBox()
         self.combo_fb2_media.addItems(fallback_items)
-        self.combo_fb2_media.currentIndexChanged.connect(lambda idx: self.fallback_changed(idx, self.spin_fb2_ceiling))
+        self.combo_fb2_media.setFixedWidth(180)
         fb2_layout.addWidget(self.combo_fb2_media)
+
+        lbl_fb2_nom = QLabel("Nominal:")
+        lbl_fb2_nom.setFixedWidth(55)
+        fb2_layout.addWidget(lbl_fb2_nom)
+        self.spin_fb2_nominal = QDoubleSpinBox()
+        self.spin_fb2_nominal.setRange(0.1, 999999.0)
+        self.spin_fb2_nominal.setDecimals(1)
+        self.spin_fb2_nominal.setValue(50.0)
+        self.spin_fb2_nominal.setFixedWidth(75)
+        self.spin_fb2_nominal.setEnabled(False)
+        fb2_layout.addWidget(self.spin_fb2_nominal)
+
+        self.combo_fb2_unit = QComboBox()
+        self.combo_fb2_unit.addItems(["GB", "MB"])
+        self.combo_fb2_unit.setFixedWidth(55)
+        self.combo_fb2_unit.setEnabled(False)
+        fb2_layout.addWidget(self.combo_fb2_unit)
         
-        fb2_layout.addWidget(QLabel("Ceiling (GiB):"))
+        lbl_fb2_ceil = QLabel("Ceiling (GiB):")
+        lbl_fb2_ceil.setFixedWidth(75)
+        fb2_layout.addWidget(lbl_fb2_ceil)
         self.spin_fb2_ceiling = QDoubleSpinBox()
-        self.spin_fb2_ceiling.setRange(0.1, 1000.0)
+        self.spin_fb2_ceiling.setRange(0.01, 10000.0)
         self.spin_fb2_ceiling.setDecimals(2)
         self.spin_fb2_ceiling.setValue(46.50)
+        self.spin_fb2_ceiling.setFixedWidth(75)
         fb2_layout.addWidget(self.spin_fb2_ceiling)
+
+        lbl_fb2_lim = QLabel("Limit (0=∞):")
+        lbl_fb2_lim.setFixedWidth(75)
+        fb2_layout.addWidget(lbl_fb2_lim)
+        self.spin_fb2_limit = QSpinBox()
+        self.spin_fb2_limit.setRange(0, 9999)
+        self.spin_fb2_limit.setValue(0)
+        self.spin_fb2_limit.setFixedWidth(60)
+        fb2_layout.addWidget(self.spin_fb2_limit)
+        fb2_layout.addStretch()
         layout.addLayout(fb2_layout)
 
         # Fallback 3
         fb3_layout = QHBoxLayout()
-        fb3_layout.addWidget(QLabel("Fallback 3 Media:"))
+        lbl_fb3 = QLabel("Fallback 3 Media:")
+        lbl_fb3.setFixedWidth(110)
+        fb3_layout.addWidget(lbl_fb3)
         self.combo_fb3_media = QComboBox()
         self.combo_fb3_media.addItems(fallback_items)
-        self.combo_fb3_media.currentIndexChanged.connect(lambda idx: self.fallback_changed(idx, self.spin_fb3_ceiling))
+        self.combo_fb3_media.setFixedWidth(180)
         fb3_layout.addWidget(self.combo_fb3_media)
+
+        lbl_fb3_nom = QLabel("Nominal:")
+        lbl_fb3_nom.setFixedWidth(55)
+        fb3_layout.addWidget(lbl_fb3_nom)
+        self.spin_fb3_nominal = QDoubleSpinBox()
+        self.spin_fb3_nominal.setRange(0.1, 999999.0)
+        self.spin_fb3_nominal.setDecimals(1)
+        self.spin_fb3_nominal.setValue(25.0)
+        self.spin_fb3_nominal.setFixedWidth(75)
+        self.spin_fb3_nominal.setEnabled(False)
+        fb3_layout.addWidget(self.spin_fb3_nominal)
+
+        self.combo_fb3_unit = QComboBox()
+        self.combo_fb3_unit.addItems(["GB", "MB"])
+        self.combo_fb3_unit.setFixedWidth(55)
+        self.combo_fb3_unit.setEnabled(False)
+        fb3_layout.addWidget(self.combo_fb3_unit)
         
-        fb3_layout.addWidget(QLabel("Ceiling (GiB):"))
+        lbl_fb3_ceil = QLabel("Ceiling (GiB):")
+        lbl_fb3_ceil.setFixedWidth(75)
+        fb3_layout.addWidget(lbl_fb3_ceil)
         self.spin_fb3_ceiling = QDoubleSpinBox()
-        self.spin_fb3_ceiling.setRange(0.1, 1000.0)
+        self.spin_fb3_ceiling.setRange(0.01, 10000.0)
         self.spin_fb3_ceiling.setDecimals(2)
         self.spin_fb3_ceiling.setValue(23.20)
+        self.spin_fb3_ceiling.setFixedWidth(75)
         fb3_layout.addWidget(self.spin_fb3_ceiling)
+
+        lbl_fb3_lim = QLabel("Limit (0=∞):")
+        lbl_fb3_lim.setFixedWidth(75)
+        fb3_layout.addWidget(lbl_fb3_lim)
+        self.spin_fb3_limit = QSpinBox()
+        self.spin_fb3_limit.setRange(0, 9999)
+        self.spin_fb3_limit.setValue(0)
+        self.spin_fb3_limit.setFixedWidth(60)
+        fb3_layout.addWidget(self.spin_fb3_limit)
+        fb3_layout.addStretch()
         layout.addLayout(fb3_layout)
+
+        # Connect media selection and nominal size handlers
+        self.combo_primary_media.currentIndexChanged.connect(self.primary_media_changed)
+        self.combo_fb1_media.currentIndexChanged.connect(lambda idx: self.fallback_changed(idx, self.spin_fb1_nominal, self.combo_fb1_unit, self.spin_fb1_ceiling))
+        self.combo_fb2_media.currentIndexChanged.connect(lambda idx: self.fallback_changed(idx, self.spin_fb2_nominal, self.combo_fb2_unit, self.spin_fb2_ceiling))
+        self.combo_fb3_media.currentIndexChanged.connect(lambda idx: self.fallback_changed(idx, self.spin_fb3_nominal, self.combo_fb3_unit, self.spin_fb3_ceiling))
+
+        self.spin_nominal.valueChanged.connect(lambda: self.nominal_changed(self.combo_primary_media, self.spin_nominal, self.combo_unit, self.spin_ceiling))
+        self.combo_unit.currentIndexChanged.connect(lambda: self.nominal_changed(self.combo_primary_media, self.spin_nominal, self.combo_unit, self.spin_ceiling))
+
+        self.spin_fb1_nominal.valueChanged.connect(lambda: self.nominal_changed(self.combo_fb1_media, self.spin_fb1_nominal, self.combo_fb1_unit, self.spin_fb1_ceiling))
+        self.combo_fb1_unit.currentIndexChanged.connect(lambda: self.nominal_changed(self.combo_fb1_media, self.spin_fb1_nominal, self.combo_fb1_unit, self.spin_fb1_ceiling))
+
+        self.spin_fb2_nominal.valueChanged.connect(lambda: self.nominal_changed(self.combo_fb2_media, self.spin_fb2_nominal, self.combo_fb2_unit, self.spin_fb2_ceiling))
+        self.combo_fb2_unit.currentIndexChanged.connect(lambda: self.nominal_changed(self.combo_fb2_media, self.spin_fb2_nominal, self.combo_fb2_unit, self.spin_fb2_ceiling))
+
+        self.spin_fb3_nominal.valueChanged.connect(lambda: self.nominal_changed(self.combo_fb3_media, self.spin_fb3_nominal, self.combo_fb3_unit, self.spin_fb3_ceiling))
+        self.combo_fb3_unit.currentIndexChanged.connect(lambda: self.nominal_changed(self.combo_fb3_media, self.spin_fb3_nominal, self.combo_fb3_unit, self.spin_fb3_ceiling))
         
         # Action Buttons
         btn_dry_run = QPushButton("Run Simulation (Dry Run)")
@@ -271,6 +418,24 @@ class VolumeSpanApp(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
+    def _compute_nominal_ceiling(self, nominal_val, unit_str):
+        if unit_str == "MB":
+            total_bytes = nominal_val * 1_000_000
+        else: # GB
+            total_bytes = nominal_val * 1_000_000_000
+        
+        # 95% of nominal decimal capacity converted to GiB gives safe Windows usable ceiling
+        safe_gib = (total_bytes * 0.95) / (1024**3)
+        return max(0.01, round(safe_gib, 2))
+
+    def nominal_changed(self, combo_media, spin_nominal, combo_unit, spin_ceiling):
+        media_text = combo_media.currentText()
+        if "USB Flash Drive" in media_text or "Custom" in media_text:
+            val = spin_nominal.value()
+            unit = combo_unit.currentText()
+            calc_ceiling = self._compute_nominal_ceiling(val, unit)
+            spin_ceiling.setValue(calc_ceiling)
+
     def _get_media_name_from_ceiling(self, ceiling_bytes):
         gib = ceiling_bytes / (1024**3)
         mapping = [
@@ -287,19 +452,66 @@ class VolumeSpanApp(QMainWindow):
         for preset_gib, name in mapping:
             if abs(gib - preset_gib) < 0.05:
                 return name
-        return f"Custom ({gib:.2f} GiB)"
+        return f"Custom / Flash ({gib:.2f} GiB)"
 
     def primary_media_changed(self, index):
-        # 0: BDXL QL, 1: BDXL TL, 2: BD-R DL, 3: BD-R SL, 4: DVD-9, 5: DVD-5, 6: Mini DVD-R, 7: CD-R, 8: Mini CD-R
-        presets = {0: 118.00, 1: 93.00, 2: 46.50, 3: 23.20, 4: 7.90, 5: 4.35, 6: 1.36, 7: 0.68, 8: 0.19}
+        presets = {
+            0: (128.0, "GB", 118.00),
+            1: (100.0, "GB", 93.00),
+            2: (50.0, "GB", 46.50),
+            3: (25.0, "GB", 23.20),
+            4: (8.5, "GB", 7.90),
+            5: (4.7, "GB", 4.35),
+            6: (1.4, "GB", 1.36),
+            7: (700.0, "MB", 0.68),
+            8: (210.0, "MB", 0.19)
+        }
         if index in presets:
-            self.spin_ceiling.setValue(presets[index])
+            nom, unit, ceil = presets[index]
+            self.spin_nominal.setEnabled(False)
+            self.combo_unit.setEnabled(False)
+            self.spin_nominal.setValue(nom)
+            self.combo_unit.setCurrentText(unit)
+            self.spin_ceiling.setValue(ceil)
+        elif index == 9: # USB Flash Drive
+            self.spin_nominal.setEnabled(True)
+            self.combo_unit.setEnabled(True)
+            calc_ceil = self._compute_nominal_ceiling(self.spin_nominal.value(), self.combo_unit.currentText())
+            self.spin_ceiling.setValue(calc_ceil)
+        else: # Custom Size
+            self.spin_nominal.setEnabled(True)
+            self.combo_unit.setEnabled(True)
 
-    def fallback_changed(self, index, spin_target):
-        # Index 0 is "None (Disabled)"; presets start from index 1
-        presets = {1: 118.00, 2: 93.00, 3: 46.50, 4: 23.20, 5: 7.90, 6: 4.35, 7: 1.36, 8: 0.68, 9: 0.19}
+    def fallback_changed(self, index, spin_nominal, combo_unit, spin_ceiling):
+        presets = {
+            1: (128.0, "GB", 118.00),
+            2: (100.0, "GB", 93.00),
+            3: (50.0, "GB", 46.50),
+            4: (25.0, "GB", 23.20),
+            5: (8.5, "GB", 7.90),
+            6: (4.7, "GB", 4.35),
+            7: (1.4, "GB", 1.36),
+            8: (700.0, "MB", 0.68),
+            9: (210.0, "MB", 0.19)
+        }
         if index in presets:
-            spin_target.setValue(presets[index])
+            nom, unit, ceil = presets[index]
+            spin_nominal.setEnabled(False)
+            combo_unit.setEnabled(False)
+            spin_nominal.setValue(nom)
+            combo_unit.setCurrentText(unit)
+            spin_ceiling.setValue(ceil)
+        elif index == 10: # USB Flash Drive
+            spin_nominal.setEnabled(True)
+            combo_unit.setEnabled(True)
+            calc_ceil = self._compute_nominal_ceiling(spin_nominal.value(), combo_unit.currentText())
+            spin_ceiling.setValue(calc_ceil)
+        elif index == 11: # Custom Size
+            spin_nominal.setEnabled(True)
+            combo_unit.setEnabled(True)
+        else: # None (Disabled)
+            spin_nominal.setEnabled(False)
+            combo_unit.setEnabled(False)
 
     def select_source_directory(self):
         dir_path = QFileDialog.getExistingDirectory(self, "Select Source Directory", self.source_directory)
@@ -316,24 +528,35 @@ class VolumeSpanApp(QMainWindow):
             self.settings.setValue("target_directory", self.target_directory)
 
     def calculate_discs(self):
-        primary_ceiling = int(self.spin_ceiling.value() * 1024 * 1024 * 1024)
-        
-        fallbacks = []
+        tiers = [
+            {
+                "id": "primary",
+                "ceiling": int(self.spin_ceiling.value() * 1024 * 1024 * 1024),
+                "limit": self.spin_limit.value(),
+                "used": 0
+            }
+        ]
         if self.combo_fb1_media.currentIndex() > 0:
-            fallbacks.append(int(self.spin_fb1_ceiling.value() * 1024 * 1024 * 1024))
+            tiers.append({
+                "id": "fb1",
+                "ceiling": int(self.spin_fb1_ceiling.value() * 1024 * 1024 * 1024),
+                "limit": self.spin_fb1_limit.value(),
+                "used": 0
+            })
         if self.combo_fb2_media.currentIndex() > 0:
-            fallbacks.append(int(self.spin_fb2_ceiling.value() * 1024 * 1024 * 1024))
+            tiers.append({
+                "id": "fb2",
+                "ceiling": int(self.spin_fb2_ceiling.value() * 1024 * 1024 * 1024),
+                "limit": self.spin_fb2_limit.value(),
+                "used": 0
+            })
         if self.combo_fb3_media.currentIndex() > 0:
-            fallbacks.append(int(self.spin_fb3_ceiling.value() * 1024 * 1024 * 1024))
-
-        # Sort active ceilings strictly largest -> smallest
-        raw_ceilings = [primary_ceiling] + fallbacks
-        sorted_ceilings = sorted(list(set(raw_ceilings)), reverse=True)
-
-        if not sorted_ceilings:
-            return None
-
-        max_capacity = sorted_ceilings[0]
+            tiers.append({
+                "id": "fb3",
+                "ceiling": int(self.spin_fb3_ceiling.value() * 1024 * 1024 * 1024),
+                "limit": self.spin_fb3_limit.value(),
+                "used": 0
+            })
 
         all_files = []
         for root, _, files in os.walk(self.source_directory):
@@ -346,13 +569,16 @@ class VolumeSpanApp(QMainWindow):
                 except Exception as e:
                     print(f"Error accessing file {full_path}: {e}")
 
+        if not all_files:
+            return []
+
         all_files.sort(key=lambda x: x[0])
 
-        # Pre-check: Fail immediately if any file exceeds largest selected media capacity
+        max_configured_capacity = max(t["ceiling"] for t in tiers)
         for rel_path, full_path, fsize in all_files:
-            if fsize > max_capacity:
+            if fsize > max_configured_capacity:
                 fsize_gib = fsize / (1024**3)
-                max_gib = max_capacity / (1024**3)
+                max_gib = max_configured_capacity / (1024**3)
                 QMessageBox.critical(
                     self, 
                     "File Exceeds Media Capacity", 
@@ -363,48 +589,75 @@ class VolumeSpanApp(QMainWindow):
                 )
                 return None
 
+        def select_tier_for_data(remaining_bytes, file_size):
+            available = [t for t in tiers if t["limit"] == 0 or t["used"] < t["limit"]]
+            if not available:
+                return None
+
+            fitting = [t for t in available if remaining_bytes <= t["ceiling"]]
+            if fitting:
+                candidate = min(fitting, key=lambda t: t["ceiling"])
+            else:
+                candidate = max(available, key=lambda t: t["ceiling"])
+
+            if file_size > candidate["ceiling"]:
+                larger = [t for t in available if file_size <= t["ceiling"]]
+                if not larger:
+                    return None
+                candidate = min(larger, key=lambda t: t["ceiling"])
+
+            return candidate
+
         discs = []
         start_disc_id = self.disc_id_input.text().strip() or "BD-0001"
         current_disc_label = start_disc_id
 
-        # Determine initial disc capacity (step down if all data fits in a smaller fallback tier)
         total_remaining = sum(f[2] for f in all_files)
-        valid_fallbacks = [c for c in sorted_ceilings if total_remaining <= c]
-        initial_ceiling = min(valid_fallbacks) if valid_fallbacks else max_capacity
+        initial_tier = select_tier_for_data(total_remaining, all_files[0][2])
+        if initial_tier is None:
+            QMessageBox.critical(
+                self,
+                "Media Limit Exceeded",
+                "Unable to start allocation. Media limits have been reached or no tier is capable of holding the first file."
+            )
+            return None
 
-        current_disc = {"label": current_disc_label, "files": [], "size": 0, "ceiling": initial_ceiling}
+        initial_tier["used"] += 1
+        current_disc = {
+            "label": current_disc_label,
+            "files": [],
+            "size": 0,
+            "ceiling": initial_tier["ceiling"]
+        }
 
         for i, (rel_path, full_path, fsize) in enumerate(all_files):
-            # Check if file fits on current disc
             if current_disc["size"] + fsize <= current_disc["ceiling"]:
                 current_disc["files"].append((rel_path, full_path, fsize))
                 current_disc["size"] += fsize
             else:
-                # Close current disc
                 if current_disc["files"]:
                     discs.append(current_disc)
                     current_disc_label = increment_disc_id(current_disc_label)
 
-                # Look ahead: calculate total remaining unallocated bytes (including current file)
                 remaining_bytes = sum(f[2] for f in all_files[i:])
+                next_tier = select_tier_for_data(remaining_bytes, fsize)
+                if next_tier is None:
+                    QMessageBox.critical(
+                        self,
+                        "Media Limit Reached",
+                        f"Unable to partition remaining archive files.\n\n"
+                        f"Configured disc limits have been exhausted before allocating:\n"
+                        f"• {rel_path} ({fsize / (1024**3):.2f} GiB)\n\n"
+                        f"Please increase the disc limits or enable additional fallback media tiers."
+                    )
+                    return None
 
-                # Default to largest media tier for all standard discs
-                next_ceiling = max_capacity
-
-                # If all remaining data can fit into a smaller active fallback tier, step down
-                valid_fallbacks = [c for c in sorted_ceilings if remaining_bytes <= c]
-                if valid_fallbacks:
-                    next_ceiling = min(valid_fallbacks)
-
-                # Ensure single file fits inside chosen ceiling
-                if fsize > next_ceiling:
-                    next_ceiling = next(c for c in sorted_ceilings if fsize <= c)
-
+                next_tier["used"] += 1
                 current_disc = {
                     "label": current_disc_label,
                     "files": [(rel_path, full_path, fsize)],
                     "size": fsize,
-                    "ceiling": next_ceiling
+                    "ceiling": next_tier["ceiling"]
                 }
 
         if current_disc["files"]:
@@ -659,19 +912,31 @@ class VolumeSpanApp(QMainWindow):
 
                     idx_primary = min(config.get("primary_media_index", 0), max_primary)
                     self.combo_primary_media.setCurrentIndex(idx_primary)
+                    self.spin_nominal.setValue(config.get("nominal", 128.0))
+                    self.combo_unit.setCurrentText(config.get("unit", "GB"))
                     self.spin_ceiling.setValue(config.get("ceiling_gib", 118.00))
+                    self.spin_limit.setValue(config.get("limit", 0))
 
                     idx_fb1 = min(config.get("fb1_media_index", 0), max_fallback)
                     self.combo_fb1_media.setCurrentIndex(idx_fb1)
+                    self.spin_fb1_nominal.setValue(config.get("fb1_nominal", 100.0))
+                    self.combo_fb1_unit.setCurrentText(config.get("fb1_unit", "GB"))
                     self.spin_fb1_ceiling.setValue(config.get("fb1_ceiling_gib", 93.00))
+                    self.spin_fb1_limit.setValue(config.get("fb1_limit", 0))
 
                     idx_fb2 = min(config.get("fb2_media_index", 0), max_fallback)
                     self.combo_fb2_media.setCurrentIndex(idx_fb2)
+                    self.spin_fb2_nominal.setValue(config.get("fb2_nominal", 50.0))
+                    self.combo_fb2_unit.setCurrentText(config.get("fb2_unit", "GB"))
                     self.spin_fb2_ceiling.setValue(config.get("fb2_ceiling_gib", 46.50))
+                    self.spin_fb2_limit.setValue(config.get("fb2_limit", 0))
 
                     idx_fb3 = min(config.get("fb3_media_index", 0), max_fallback)
                     self.combo_fb3_media.setCurrentIndex(idx_fb3)
+                    self.spin_fb3_nominal.setValue(config.get("fb3_nominal", 25.0))
+                    self.combo_fb3_unit.setCurrentText(config.get("fb3_unit", "GB"))
                     self.spin_fb3_ceiling.setValue(config.get("fb3_ceiling_gib", 23.20))
+                    self.spin_fb3_limit.setValue(config.get("fb3_limit", 0))
                     
                     saved_disc_id = config.get("disc_id_input", "")
                     if saved_disc_id:
@@ -714,15 +979,27 @@ class VolumeSpanApp(QMainWindow):
         self.settings.setValue("height", self.height())
         self.settings.setValue("ceiling_gib", self.spin_ceiling.value())
         self.settings.setValue("primary_media_index", self.combo_primary_media.currentIndex())
+        self.settings.setValue("nominal", self.spin_nominal.value())
+        self.settings.setValue("unit", self.combo_unit.currentText())
+        self.settings.setValue("limit", self.spin_limit.value())
 
         self.settings.setValue("fb1_ceiling_gib", self.spin_fb1_ceiling.value())
         self.settings.setValue("fb1_media_index", self.combo_fb1_media.currentIndex())
+        self.settings.setValue("fb1_nominal", self.spin_fb1_nominal.value())
+        self.settings.setValue("fb1_unit", self.combo_fb1_unit.currentText())
+        self.settings.setValue("fb1_limit", self.spin_fb1_limit.value())
 
         self.settings.setValue("fb2_ceiling_gib", self.spin_fb2_ceiling.value())
         self.settings.setValue("fb2_media_index", self.combo_fb2_media.currentIndex())
+        self.settings.setValue("fb2_nominal", self.spin_fb2_nominal.value())
+        self.settings.setValue("fb2_unit", self.combo_fb2_unit.currentText())
+        self.settings.setValue("fb2_limit", self.spin_fb2_limit.value())
 
         self.settings.setValue("fb3_ceiling_gib", self.spin_fb3_ceiling.value())
         self.settings.setValue("fb3_media_index", self.combo_fb3_media.currentIndex())
+        self.settings.setValue("fb3_nominal", self.spin_fb3_nominal.value())
+        self.settings.setValue("fb3_unit", self.combo_fb3_unit.currentText())
+        self.settings.setValue("fb3_limit", self.spin_fb3_limit.value())
 
         self.settings.setValue("theme", self.current_theme)
         self.settings.setValue("disc_id_input", self.disc_id_input.text().strip())
@@ -819,7 +1096,7 @@ class VolumeSpanApp(QMainWindow):
     def show_manual(self):
         dialog = QDialog(self)
         dialog.setWindowTitle("Manual")
-        dialog.resize(650, 550)
+        dialog.resize(680, 580)
         layout = QVBoxLayout(dialog)
 
         text_browser = QTextBrowser()
@@ -858,19 +1135,21 @@ class VolumeSpanApp(QMainWindow):
             f"<p style='margin-top: 0;'>MANUAL & USAGE GUIDE | Copyright (C) 2026 pwshAgyjkcrg761</p>"
             f"<br>"
             f"<h2>OVERVIEW</h2>"
-            f"<p>VolumeSpan is an automated optical disc backup staging utility designed to partition local directory trees sequentially into fixed-capacity volumes (e.g., <b>BD-0001</b>, <b>BD-0002</b>) using native NTFS hardlinks.</p>"
+            f"<p>VolumeSpan is an automated optical disc and removable media staging utility designed to partition local directory trees sequentially into fixed-capacity volumes (e.g., <b>BD-0001</b>, <b>BD-0002</b>) using native NTFS hardlinks.</p>"
             f"<h2>USAGE WORKFLOW</h2>"
             f"<div class='step-card'><b>1. Select Source:</b> Choose the local folder tree you wish to split and archive.</div>"
             f"<div class='step-card'><b>2. Select Staging Target:</b> Pick an output folder on the <b>same local drive volume</b> to store the generated disc structures.</div>"
-            f"<div class='step-card'><b>3. Configure Media & Fallbacks:</b> Choose your primary media preset and optional fallback tiers for tail volumes, or define custom GiB ceilings.</div>"
+            f"<div class='step-card'><b>3. Configure Media, Limits & Fallbacks:</b> Choose your primary media preset and optional fallback tiers for tail volumes. Set a maximum volume count limit per tier (<code>0</code> for unlimited). For USB Flash Drives or Custom sizes, enter the manufacturer nominal size (MB/GB) to auto-calculate the safe Windows usable ceiling.</div>"
             f"<div class='step-card'><b>4. Run Simulation & Export Index:</b> Click <b>'Run Simulation (Dry Run)'</b> to view a detailed allocation breakdown of discs and media sizes before writing. Click <b>'Save As Index'</b> to export a formatted text index file of the disc set.</div>"
-            f"<div class='step-card'><b>5. Generate Hardlinks:</b> Click <b>'Generate Hardlink Backup Trees'</b> to assemble zero-byte staging folders ready for disc authoring.</div>"
+            f"<div class='step-card'><b>5. Generate Hardlinks:</b> Click <b>'Generate Hardlink Backup Trees'</b> to assemble zero-byte staging folders ready for disc authoring or drive copy.</div>"
             f"<div class='step-card'><b>6. Clean Staging:</b> Click <b>'Clean Staging Target (Remove Hardlinks)'</b> to safely delete staging trees after burning. Non-hardlinked files are preserved.</div>"
             f"<h2>CORE FEATURES</h2>"
-            f"<p><b>Multi-Tier Media Fallbacks:</b> Automatically steps down the final volume (or small archives) to smaller optical formats to conserve media.</p>"
+            f"<p><b>Tier Volume Limits:</b> Enforce maximum volume counts per media tier (<code>0 = unlimited</code>), automatically transitioning to configured fallback tiers once limits are reached.</p>"
+            f"<p><b>Flash Drive & Custom Sizing:</b> Automatically calculates usable real-world capacity from manufacturer nominal ratings (e.g. 256 MB or 32 GB), accounting for decimal-to-binary conversion and filesystem formatting headroom.</p>"
+            f"<p><b>Multi-Tier Media Fallbacks:</b> Automatically steps down tail volumes (or small archives) to smaller optical or flash formats to avoid wasting larger media.</p>"
             f"<p><b>Zero Storage Duplication:</b> Utilizes native NTFS hardlinks so staging folders consume zero extra storage space on your drive.</p>"
-            f"<p><b>Deterministic Sequential Splits:</b> Preserves alphabetical and directory order across disc volumes for straightforward data restoration.</p>"
-            f"<p><b>Index Report Export:</b> Generates structured text index reports detailing the exact disc allocation and file paths across the entire backup set.</p>"
+            f"<p><b>Deterministic Sequential Splits:</b> Preserves alphabetical and directory order across volumes for straightforward data restoration.</p>"
+            f"<p><b>Index Report Export:</b> Generates structured text index reports detailing the exact volume allocation and file paths across the entire backup set.</p>"
             f"<h2>DEPENDENCIES</h2>"
             f"<p><b>Python:</b> Built with Python 3.14.5.</p>"
             f"<p><b>PyQt6:</b> Orchestrates the graphical user interface.</p>"
