@@ -3,6 +3,8 @@
 
 ---
 
+![KryptDist Dark Mode Main Interface](images/VolumeSpan-py_dark_mode_main.png)
+
 ## Overview
 VolumeSpan™ is a backup staging application designed to partition large local directory trees sequentially into fixed-capacity optical disc and removable media volumes (e.g., **BD-0001**, **BD-0002**) using native NTFS hardlinks. It allows you to organize data for optical burning or removable storage—such as BDXL, BD-R, DVD, CD, and USB Flash Drives—without duplicating files or consuming additional hard drive space.
 
