@@ -1,6 +1,6 @@
 # ==============================================================================
 # SCRIPT: VolumeSpan.py
-# VERSION: 2026.09.05__08.56.34
+# VERSION: 2026.09.18__19.11.14
 # TARGET: Python 3.14.5
 #
 # Copyright (C) 2026 pwshAgyjkcrg761
@@ -76,7 +76,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTextBrowser, QDialogButtonBox, QTreeWidget, QTreeWidgetItem)
 from PyQt6.QtGui import QActionGroup, QPalette, QColor, QIcon
 
-APP_VERSION = "2026.09.05__08.56.34"
+APP_VERSION = "2026.09.18__19.11.14"
 
 def increment_disc_id(disc_id: str) -> str:
     match = re.search(r'(.*?)(\d+)$', disc_id)
@@ -109,9 +109,14 @@ class VolumeSpanApp(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"VolumeSpan v{APP_VERSION}")
         
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-        
-        internal_dir = os.path.join(script_dir, "VolumeSpan_internal")
+        if getattr(sys, 'frozen', False):
+            base_dir = os.path.dirname(sys.executable)
+            bundle_dir = getattr(sys, '_MEIPASS', base_dir)
+        else:
+            base_dir = os.path.dirname(os.path.realpath(__file__))
+            bundle_dir = base_dir
+
+        internal_dir = os.path.join(base_dir, "VolumeSpan_internal")
         os.makedirs(internal_dir, exist_ok=True)
         self.config_file = os.path.join(internal_dir, "VolumeSpan.config.json")
         
@@ -119,7 +124,7 @@ class VolumeSpanApp(QMainWindow):
             myappid = f"pwshAgyjkcrg761.volumespan.{APP_VERSION}"
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
-        icon_path = os.path.join(internal_dir, "icons", "volumespan_cd_icon.svg")
+        icon_path = os.path.join(bundle_dir, "VolumeSpan_internal", "icons", "volumespan_cd_icon.svg")
         if os.path.exists(icon_path):
             app_icon = QIcon(icon_path)
             self.setWindowIcon(app_icon)
