@@ -1,6 +1,6 @@
 # ==============================================================================
 # SCRIPT: VolumeSpan.py
-# VERSION: 2026.09.18__19.11.14
+# VERSION: 2026.10.02__14.36.16
 # TARGET: Python 3.14.5
 #
 # Copyright (C) 2026 pwshAgyjkcrg761
@@ -76,7 +76,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTextBrowser, QDialogButtonBox, QTreeWidget, QTreeWidgetItem)
 from PyQt6.QtGui import QActionGroup, QPalette, QColor, QIcon
 
-APP_VERSION = "2026.09.18__19.11.14"
+APP_VERSION = "2026.10.02__14.36.16"
 
 def increment_disc_id(disc_id: str) -> str:
     match = re.search(r'(.*?)(\d+)$', disc_id)
@@ -130,7 +130,7 @@ class VolumeSpanApp(QMainWindow):
             self.setWindowIcon(app_icon)
             QApplication.setWindowIcon(app_icon)
             
-        self.default_size = (840, 380)
+        self.default_size = (840, 368)
         
         self.settings = SettingsWrapper(self.config_file)
         self.load_geometry()
@@ -202,8 +202,8 @@ class VolumeSpanApp(QMainWindow):
         cap_layout.addWidget(lbl_pri)
         self.combo_primary_media = QComboBox()
         self.combo_primary_media.addItems(media_items)
-        self.combo_primary_media.setFixedWidth(180)
-        cap_layout.addWidget(self.combo_primary_media)
+        self.combo_primary_media.setMinimumWidth(180)
+        cap_layout.addWidget(self.combo_primary_media, 1)
 
         lbl_nom = QLabel("Nominal:")
         lbl_nom.setFixedWidth(55)
@@ -240,7 +240,6 @@ class VolumeSpanApp(QMainWindow):
         self.spin_limit.setValue(0)
         self.spin_limit.setFixedWidth(60)
         cap_layout.addWidget(self.spin_limit)
-        cap_layout.addStretch()
         layout.addLayout(cap_layout)
 
         # Fallback 1
@@ -250,8 +249,8 @@ class VolumeSpanApp(QMainWindow):
         fb1_layout.addWidget(lbl_fb1)
         self.combo_fb1_media = QComboBox()
         self.combo_fb1_media.addItems(fallback_items)
-        self.combo_fb1_media.setFixedWidth(180)
-        fb1_layout.addWidget(self.combo_fb1_media)
+        self.combo_fb1_media.setMinimumWidth(180)
+        fb1_layout.addWidget(self.combo_fb1_media, 1)
 
         lbl_fb1_nom = QLabel("Nominal:")
         lbl_fb1_nom.setFixedWidth(55)
@@ -288,7 +287,6 @@ class VolumeSpanApp(QMainWindow):
         self.spin_fb1_limit.setValue(0)
         self.spin_fb1_limit.setFixedWidth(60)
         fb1_layout.addWidget(self.spin_fb1_limit)
-        fb1_layout.addStretch()
         layout.addLayout(fb1_layout)
 
         # Fallback 2
@@ -298,8 +296,8 @@ class VolumeSpanApp(QMainWindow):
         fb2_layout.addWidget(lbl_fb2)
         self.combo_fb2_media = QComboBox()
         self.combo_fb2_media.addItems(fallback_items)
-        self.combo_fb2_media.setFixedWidth(180)
-        fb2_layout.addWidget(self.combo_fb2_media)
+        self.combo_fb2_media.setMinimumWidth(180)
+        fb2_layout.addWidget(self.combo_fb2_media, 1)
 
         lbl_fb2_nom = QLabel("Nominal:")
         lbl_fb2_nom.setFixedWidth(55)
@@ -336,7 +334,6 @@ class VolumeSpanApp(QMainWindow):
         self.spin_fb2_limit.setValue(0)
         self.spin_fb2_limit.setFixedWidth(60)
         fb2_layout.addWidget(self.spin_fb2_limit)
-        fb2_layout.addStretch()
         layout.addLayout(fb2_layout)
 
         # Fallback 3
@@ -346,8 +343,8 @@ class VolumeSpanApp(QMainWindow):
         fb3_layout.addWidget(lbl_fb3)
         self.combo_fb3_media = QComboBox()
         self.combo_fb3_media.addItems(fallback_items)
-        self.combo_fb3_media.setFixedWidth(180)
-        fb3_layout.addWidget(self.combo_fb3_media)
+        self.combo_fb3_media.setMinimumWidth(180)
+        fb3_layout.addWidget(self.combo_fb3_media, 1)
 
         lbl_fb3_nom = QLabel("Nominal:")
         lbl_fb3_nom.setFixedWidth(55)
@@ -384,7 +381,6 @@ class VolumeSpanApp(QMainWindow):
         self.spin_fb3_limit.setValue(0)
         self.spin_fb3_limit.setFixedWidth(60)
         fb3_layout.addWidget(self.spin_fb3_limit)
-        fb3_layout.addStretch()
         layout.addLayout(fb3_layout)
 
         # Connect media selection and nominal size handlers
@@ -405,19 +401,34 @@ class VolumeSpanApp(QMainWindow):
         self.spin_fb3_nominal.valueChanged.connect(lambda: self.nominal_changed(self.combo_fb3_media, self.spin_fb3_nominal, self.combo_fb3_unit, self.spin_fb3_ceiling))
         self.combo_fb3_unit.currentIndexChanged.connect(lambda: self.nominal_changed(self.combo_fb3_media, self.spin_fb3_nominal, self.combo_fb3_unit, self.spin_fb3_ceiling))
         
-        # Action Buttons
-        btn_dry_run = QPushButton("Run Simulation (Dry Run)")
-        btn_dry_run.clicked.connect(self.run_dry_run)
-        layout.addWidget(btn_dry_run)
-        
-        btn_execute = QPushButton("Generate Hardlink Backup Trees")
-        btn_execute.clicked.connect(self.execute_hardlinks)
-        layout.addWidget(btn_execute)
+# Action Buttons (2x2 Workflow Grid)
+        layout.addStretch(1)
 
-        btn_cleanup = QPushButton("Clean Staging Target (Remove Hardlinks)")
+        row1_layout = QHBoxLayout()
+        btn_dry_run = QPushButton("1. Run Simulation (Dry Run)")
+        btn_dry_run.clicked.connect(self.run_dry_run)
+        row1_layout.addWidget(btn_dry_run)
+        
+        btn_execute = QPushButton("2. Generate Hardlink Backup Trees")
+        btn_execute.clicked.connect(self.execute_hardlinks)
+        row1_layout.addWidget(btn_execute)
+        layout.addLayout(row1_layout)
+
+        row2_layout = QHBoxLayout()
+        btn_cleanup = QPushButton("3. Clean Staging Target (Remove Hardlinks)")
         btn_cleanup.clicked.connect(self.cleanup_staging)
-        layout.addWidget(btn_cleanup)
-        layout.addStretch()
+        row2_layout.addWidget(btn_cleanup)
+
+        btn_purge = QPushButton("4. Purge Burned Files from Source (Exclude Tail)")
+        btn_purge.clicked.connect(self.purge_burned_source)
+        row2_layout.addWidget(btn_purge)
+        layout.addLayout(row2_layout)
+
+        for btn in (btn_dry_run, btn_execute, btn_cleanup, btn_purge):
+            btn.setMinimumHeight(42)
+            btn.setMaximumHeight(54)
+
+        layout.addStretch(1)
         
         container = QWidget()
         container.setLayout(layout)
@@ -735,9 +746,10 @@ class VolumeSpanApp(QMainWindow):
         d_layout = QVBoxLayout(dialog)
 
         tree = QTreeWidget()
-        tree.setHeaderLabels(["Disc / Relative Path", "Size", "Media Type"])
-        tree.setColumnWidth(0, 420)
-        tree.setColumnWidth(1, 100)
+        tree.setHeaderLabels(["Disc / Relative Path", "Size", "Free Space", "Media Type"])
+        tree.setColumnWidth(0, 360)
+        tree.setColumnWidth(1, 95)
+        tree.setColumnWidth(2, 95)
 
         total_bytes = 0
 
@@ -745,9 +757,17 @@ class VolumeSpanApp(QMainWindow):
             disc_item = QTreeWidgetItem(tree)
             pct = (d["size"] / d["ceiling"]) * 100 if d["ceiling"] > 0 else 0.0
             media_name = self._get_media_name_from_ceiling(d["ceiling"])
-            disc_item.setText(0, f"{d['label']} ({len(d['files'])} files) - {pct:.1f}% filled")
+            free_gib = max(0.0, (d["ceiling"] - d["size"]) / (1024**3))
+            warn_tag = " [< 70% Full]" if pct < 70.0 else ""
+            disc_item.setText(0, f"{d['label']} ({len(d['files'])} files) - {pct:.1f}% filled{warn_tag}")
             disc_item.setText(1, f"{d['size'] / (1024**3):.2f} GiB")
-            disc_item.setText(2, media_name)
+            disc_item.setText(2, f"{free_gib:.2f} GiB")
+            disc_item.setText(3, media_name)
+
+            if pct < 70.0:
+                for col in range(4):
+                    disc_item.setForeground(col, QColor("#e04848"))
+
             total_bytes += d["size"]
 
             for rel_path, _, fsize in d["files"]:
@@ -755,17 +775,24 @@ class VolumeSpanApp(QMainWindow):
                 file_item.setText(0, rel_path)
                 file_item.setText(1, f"{fsize / (1024**2):.2f} MiB")
                 file_item.setText(2, "")
+                file_item.setText(3, "")
 
         d_layout.addWidget(tree)
         
         summary_label = QLabel(f"Total Discs: {len(discs)} | Total Data: {total_bytes / (1024**3):.2f} GiB")
         d_layout.addWidget(summary_label)
 
-        def save_index():
-            if len(discs) == 1:
-                suggested_filename = f"{discs[0]['label']}.txt"
+        def save_index(exclude_tail=False):
+            export_discs = discs[:-1] if (exclude_tail and len(discs) > 1) else discs
+            if not export_discs:
+                return
+
+            export_bytes = sum(d["size"] for d in export_discs)
+
+            if len(export_discs) == 1:
+                suggested_filename = f"{export_discs[0]['label']}.txt"
             else:
-                suggested_filename = f"{discs[0]['label']} - {discs[-1]['label']}.txt"
+                suggested_filename = f"{export_discs[0]['label']} - {export_discs[-1]['label']}.txt"
 
             default_save_path = os.path.join(self.target_directory, suggested_filename)
             file_path, _ = QFileDialog.getSaveFileName(
@@ -778,12 +805,12 @@ class VolumeSpanApp(QMainWindow):
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write("=" * 80 + "\n")
                     f.write("VOLUMESPAN INDEX REPORT\n")
-                    f.write(f"Total Discs: {len(discs)} | Total Data: {total_bytes / (1024**3):.2f} GiB\n")
+                    f.write(f"Total Discs: {len(export_discs)} | Total Data: {export_bytes / (1024**3):.2f} GiB\n")
                     f.write(f"Source: {self.source_directory}\n")
                     f.write(f"Staging Target: {self.target_directory}\n")
                     f.write("=" * 80 + "\n\n")
 
-                    for d in discs:
+                    for d in export_discs:
                         pct = (d["size"] / d["ceiling"]) * 100 if d["ceiling"] > 0 else 0.0
                         media_name = self._get_media_name_from_ceiling(d["ceiling"])
                         f.write(f"[{d['label']}] - {media_name} ({d['size'] / (1024**3):.2f} GiB / {d['ceiling'] / (1024**3):.2f} GiB, {pct:.1f}% filled, {len(d['files'])} files)\n")
@@ -798,8 +825,13 @@ class VolumeSpanApp(QMainWindow):
 
         btn_layout = QHBoxLayout()
         btn_save_index = QPushButton("Save As Index")
-        btn_save_index.clicked.connect(save_index)
+        btn_save_index.clicked.connect(lambda: save_index(exclude_tail=False))
         btn_layout.addWidget(btn_save_index)
+
+        btn_save_index_no_tail = QPushButton("Save Index (Exclude Tail)")
+        btn_save_index_no_tail.setEnabled(len(discs) > 1)
+        btn_save_index_no_tail.clicked.connect(lambda: save_index(exclude_tail=True))
+        btn_layout.addWidget(btn_save_index_no_tail)
         btn_layout.addStretch()
 
         btn_close = QPushButton("Close Report")
@@ -838,8 +870,12 @@ class VolumeSpanApp(QMainWindow):
                         os.link(full_path, dest_path)
                         created_links += 1
 
-            last_disc_id = discs[-1]["label"]
-            self.lbl_last_disc.setText(f"Last Disc ID Created: {last_disc_id}")
+            tail_disc = discs[-1]
+            tail_size_gib = tail_disc["size"] / (1024**3)
+            tail_free_gib = max(0.0, (tail_disc["ceiling"] - tail_disc["size"]) / (1024**3))
+            pct = (tail_disc["size"] / tail_disc["ceiling"]) * 100 if tail_disc["ceiling"] > 0 else 0.0
+            warning_tag = " <span style='color: #e04848; font-weight: bold;'>[&lt; 70% Full]</span>" if pct < 70.0 else ""
+            self.lbl_last_disc.setText(f"Last Disc ID Created: {tail_disc['label']} ({tail_size_gib:.2f} GiB / {tail_free_gib:.2f} GiB){warning_tag}")
             self.lbl_last_disc.setVisible(True)
 
             QMessageBox.information(self, "Execution Complete", 
@@ -904,6 +940,184 @@ class VolumeSpanApp(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(self, "Cleanup Error", f"An error occurred while cleaning up staging:\n{e}")
+
+    def purge_burned_source(self):
+        if not self.validate_paths():
+            return
+
+        discs = self.calculate_discs()
+        if not discs:
+            return
+
+        if len(discs) <= 1:
+            QMessageBox.information(
+                self, 
+                "No Completed Volumes to Purge",
+                f"Only 1 volume ({discs[0]['label']}) was generated, which is currently the tail volume.\n\n"
+                "There are no earlier completed volumes to purge."
+            )
+            return
+
+        burned_discs = discs[:-1]
+        tail_disc = discs[-1]
+
+        total_files = sum(len(d["files"]) for d in burned_discs)
+        total_bytes = sum(d["size"] for d in burned_discs)
+        label_range = (f"{burned_discs[0]['label']} through {burned_discs[-1]['label']}"
+                       if len(burned_discs) > 1 else burned_discs[0]['label'])
+
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Purge Burned Files from Source")
+        msg_box.setIcon(QMessageBox.Icon.Warning)
+        msg_box.setText(
+            f"<b>Ready to purge {len(burned_discs)} completed volume(s) ({label_range})</b><br><br>"
+            f"<b>Source Folder:</b> {self.source_directory}<br>"
+            f"<b>Data to Remove:</b> {total_files:,} files ({total_bytes / (1024**3):.2f} GiB)<br>"
+            f"<b>Protected Tail Volume:</b> {tail_disc['label']} ({len(tail_disc['files']):,} files, "
+            f"{tail_disc['size'] / (1024**3):.2f} GiB) will be <b>PRESERVED</b>.<br><br>"
+            "<i>WARNING: Only proceed if you have verified that these completed discs are burned and readable.</i>"
+        )
+
+        btn_purge_now = msg_box.addButton("Purge Source Files Now", QMessageBox.ButtonRole.AcceptRole)
+        btn_export_bat = msg_box.addButton("Export Cleanup .BAT File", QMessageBox.ButtonRole.ActionRole)
+        btn_cancel = msg_box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        msg_box.setDefaultButton(btn_cancel)
+
+        msg_box.exec()
+        clicked = msg_box.clickedButton()
+
+        if clicked == btn_purge_now:
+            confirm = QMessageBox.question(
+                self,
+                "Final Confirmation - Delete Source Files",
+                f"Permanently delete {total_files:,} source files ({total_bytes / (1024**3):.2f} GiB) from your drive?\n\n"
+                "This action cannot be undone.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if confirm != QMessageBox.StandardButton.Yes:
+                return
+
+            deleted_files = 0
+            errors = 0
+            for d in burned_discs:
+                for _, full_path, _ in d["files"]:
+                    try:
+                        if os.path.exists(full_path):
+                            os.remove(full_path)
+                            deleted_files += 1
+                    except Exception as e:
+                        errors += 1
+                        print(f"Error deleting {full_path}: {e}")
+
+            # Prune empty directories in Source tree
+            removed_dirs = 0
+            for root, dirs, _ in os.walk(self.source_directory, topdown=False):
+                for d in dirs:
+                    dir_path = os.path.join(root, d)
+                    try:
+                        os.rmdir(dir_path)
+                        removed_dirs += 1
+                    except OSError:
+                        pass
+
+            result_msg = (
+                f"Purge complete.\n\n"
+                f"• Deleted: {deleted_files:,} file(s)\n"
+                f"• Cleaned: {removed_dirs:,} empty subfolder(s)\n"
+                f"• Preserved: Tail volume {tail_disc['label']} remains intact in Source."
+            )
+            if errors > 0:
+                result_msg += f"\n\nNotice: {errors} file(s) could not be removed (in use or access denied)."
+
+            QMessageBox.information(self, "Purge Complete", result_msg)
+
+        elif clicked == btn_export_bat:
+            suggested_bat = (f"Purge_Burned_{burned_discs[0]['label']}_to_{burned_discs[-1]['label']}.bat"
+                             if len(burned_discs) > 1 else f"Purge_Burned_{burned_discs[0]['label']}.bat")
+            default_path = os.path.join(self.target_directory, suggested_bat)
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Export Cleanup Batch Script", default_path, "Batch Files (*.bat);;All Files (*)"
+            )
+            if not file_path:
+                return
+
+            try:
+                ps_source_dir = self.source_directory.replace("'", "''")
+
+                with open(file_path, "w", encoding="utf-8") as f:
+                    # Windows cmd launcher extracting PowerShell execution block safely
+                    f.write("@echo off\n")
+                    f.write("setlocal\n")
+                    f.write('set "SCRIPT_PATH=%~f0"\n')
+                    f.write('powershell -NoProfile -ExecutionPolicy Bypass -Command "$p=$env:SCRIPT_PATH; $lines=[System.IO.File]::ReadAllLines($p,[System.Text.Encoding]::UTF8); $s=[Array]::IndexOf($lines,\':::POWERSHELL_START:::\'); $e=[Array]::IndexOf($lines,\':::FILE_LIST_START:::\'); if($s -ge 0 -and $e -gt $s){ $code=$lines[($s+1)..($e-1)] -join [Environment]::NewLine; & ([scriptblock]::Create($code)) $p } else { Write-Error \'Script boundary markers missing.\'; exit 1 }"\n')
+                    f.write("if %ERRORLEVEL% NEQ 0 (\n")
+                    f.write("    echo.\n")
+                    f.write("    echo Script execution failed with error code %ERRORLEVEL%.\n")
+                    f.write("    pause\n")
+                    f.write(")\n")
+                    f.write("exit /b %ERRORLEVEL%\n\n")
+
+                    # PowerShell logic block (executed cleanly, never parses raw file paths as code)
+                    f.write(":::POWERSHELL_START:::\n")
+                    f.write("param([string]$scriptPath)\n")
+                    f.write("[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n")
+                    f.write('Write-Host "============================================================" -ForegroundColor Cyan\n')
+                    f.write('Write-Host "VOLUMESPAN SOURCE PURGE SCRIPT" -ForegroundColor Cyan\n')
+                    f.write(f'Write-Host "Burned Volume(s): {label_range}" -ForegroundColor Yellow\n')
+                    f.write(f'Write-Host "Files to Delete: {total_files:,} ({total_bytes / (1024**3):.2f} GiB)"\n')
+                    f.write(f'Write-Host "Preserved Tail: {tail_disc["label"]}" -ForegroundColor Green\n')
+                    f.write('Write-Host "============================================================" -ForegroundColor Cyan\n')
+                    f.write('Write-Host "WARNING: This will permanently delete the burned source files!" -ForegroundColor Red\n')
+                    f.write('Write-Host "Only proceed if all discs have finished burning and verified." -ForegroundColor Yellow\n')
+                    f.write('Write-Host ""\n')
+                    f.write('$confirm = Read-Host "Do you want to proceed? (Y/N)"\n')
+                    f.write('if ($confirm.Trim().ToUpper() -ne "Y") {\n')
+                    f.write('    Write-Host "Operation cancelled. No files were deleted." -ForegroundColor Yellow\n')
+                    f.write('    exit 0\n')
+                    f.write('}\n')
+                    f.write('Write-Host ""\n')
+                    f.write('Write-Host "Reading file list..." -ForegroundColor Cyan\n')
+                    f.write('$allLines = [System.IO.File]::ReadAllLines($scriptPath, [System.Text.Encoding]::UTF8)\n')
+                    f.write('$listIdx = [Array]::IndexOf($allLines, ":::FILE_LIST_START:::")\n')
+                    f.write('if ($listIdx -lt 0) { Write-Error "File list boundary missing."; exit 1 }\n\n')
+                    f.write('$files = $allLines[($listIdx + 1)..($allLines.Length - 1)] | Where-Object { $_.Trim() -ne \'\' -and -not $_.StartsWith(\'#\') }\n')
+                    f.write('Write-Host "Deleting $($files.Count) burned source file(s)..." -ForegroundColor Cyan\n')
+                    f.write('$deletedCount = 0\n')
+                    f.write('foreach ($file in $files) {\n')
+                    f.write('    if (Test-Path -LiteralPath $file) {\n')
+                    f.write('        try {\n')
+                    f.write('            Remove-Item -LiteralPath $file -Force -ErrorAction Stop\n')
+                    f.write('            $deletedCount++\n')
+                    f.write('        } catch {\n')
+                    f.write('            Write-Warning "Could not delete: $file ($($_.Exception.Message))"\n')
+                    f.write('        }\n')
+                    f.write('    }\n')
+                    f.write('}\n\n')
+                    f.write('Write-Host "Pruning empty directories in source tree..." -ForegroundColor Cyan\n')
+                    f.write(f'$srcDir = \'{ps_source_dir}\'\n')
+                    f.write('if (Test-Path -LiteralPath $srcDir) {\n')
+                    f.write('    Get-ChildItem -LiteralPath $srcDir -Recurse -Directory -Force | Sort-Object -Property FullName -Descending | ForEach-Object {\n')
+                    f.write('        if (($_.GetFileSystemInfos().Count -eq 0)) {\n')
+                    f.write('            try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue } catch {}\n')
+                    f.write('        }\n')
+                    f.write('    }\n')
+                    f.write('}\n\n')
+                    f.write('Write-Host ""\n')
+                    f.write('Write-Host "Cleanup completed successfully. Deleted $deletedCount file(s)." -ForegroundColor Green\n')
+                    f.write('Write-Host "Press any key to exit..."\n')
+                    f.write('$null = [Console]::ReadKey($true)\n\n')
+
+                    # Plain text file list section
+                    f.write(":::FILE_LIST_START:::\n")
+                    for d in burned_discs:
+                        f.write(f"# --- Files for {d['label']} ---\n")
+                        for _, full_path, _ in d["files"]:
+                            f.write(f"{full_path}\n")
+
+                QMessageBox.information(self, "Script Exported", f"Cleanup batch script exported to:\n{file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Export Error", f"An error occurred while exporting batch file:\n{e}")
 
     def load_saved_settings(self):
         if os.path.exists(self.config_file):
@@ -1142,19 +1356,20 @@ class VolumeSpanApp(QMainWindow):
             f"<h2>OVERVIEW</h2>"
             f"<p>VolumeSpan is an automated optical disc and removable media staging utility designed to partition local directory trees sequentially into fixed-capacity volumes (e.g., <b>BD-0001</b>, <b>BD-0002</b>) using native NTFS hardlinks.</p>"
             f"<h2>USAGE WORKFLOW</h2>"
-            f"<div class='step-card'><b>1. Select Source:</b> Choose the local folder tree you wish to split and archive.</div>"
-            f"<div class='step-card'><b>2. Select Staging Target:</b> Pick an output folder on the <b>same local drive volume</b> to store the generated disc structures.</div>"
-            f"<div class='step-card'><b>3. Configure Media, Limits & Fallbacks:</b> Choose your primary media preset and optional fallback tiers for tail volumes. Set a maximum volume count limit per tier (<code>0</code> for unlimited). For USB Flash Drives or Custom sizes, enter the manufacturer nominal size (MB/GB) to auto-calculate the safe Windows usable ceiling.</div>"
-            f"<div class='step-card'><b>4. Run Simulation & Export Index:</b> Click <b>'Run Simulation (Dry Run)'</b> to view a detailed allocation breakdown of discs and media sizes before writing. Click <b>'Save As Index'</b> to export a formatted text index file of the disc set.</div>"
-            f"<div class='step-card'><b>5. Generate Hardlinks:</b> Click <b>'Generate Hardlink Backup Trees'</b> to assemble zero-byte staging folders ready for disc authoring or drive copy.</div>"
-            f"<div class='step-card'><b>6. Clean Staging:</b> Click <b>'Clean Staging Target (Remove Hardlinks)'</b> to safely delete staging trees after burning. Non-hardlinked files are preserved.</div>"
+            f"<div class='step-card'><b>1. Select Source & Staging Target:</b> Choose the source folder to archive and a staging folder on the <b>same local drive volume</b>.</div>"
+            f"<div class='step-card'><b>2. Configure Media, Limits & Fallbacks:</b> Select your primary media and optional fallback tiers for tail volumes. Set a volume count limit per tier (<code>0</code> for unlimited). For USB Flash Drives or Custom sizes, enter manufacturer ratings (MB/GB) to auto-calculate the safe usable ceiling.</div>"
+            f"<div class='step-card'><b>3. Step 1 — Run Simulation (Dry Run):</b> Inspect the allocation breakdown, including used capacity, remaining free space, and media tiers. Underfilled volumes (&lt; 70% full) are highlighted in red with a <code>[&lt; 70% Full]</code> indicator. Use <b>Save As Index</b> or <b>Save Index (Exclude Tail)</b> to export catalog text files.</div>"
+            f"<div class='step-card'><b>4. Step 2 — Generate Hardlink Backup Trees:</b> Creates zero-byte NTFS hardlink folders ready for burning. The <b>Last Disc ID Created</b> indicator tracks the final volume's size, free space, and fill warnings.</div>"
+            f"<div class='step-card'><b>5. Step 3 — Clean Staging Target:</b> Safely removes staging hardlinks after burning. Non-hardlinked files and source data are strictly preserved.</div>"
+            f"<div class='step-card'><b>6. Step 4 — Purge Burned Files from Source:</b> Deletes verified source files for completed volumes while strictly preserving unburned tail volume files. Choose direct in-app Python deletion or export a double-clickable, Unicode-safe <code>.bat</code> script with explicit <code>(Y/N)</code> confirmation.</div>"
             f"<h2>CORE FEATURES</h2>"
-            f"<p><b>Tier Volume Limits:</b> Enforce maximum volume counts per media tier (<code>0 = unlimited</code>), automatically transitioning to configured fallback tiers once limits are reached.</p>"
-            f"<p><b>Flash Drive & Custom Sizing:</b> Automatically calculates usable real-world capacity from manufacturer nominal ratings (e.g. 256 MB or 32 GB), accounting for decimal-to-binary conversion and filesystem formatting headroom.</p>"
-            f"<p><b>Multi-Tier Media Fallbacks:</b> Automatically steps down tail volumes (or small archives) to smaller optical or flash formats to avoid wasting larger media.</p>"
-            f"<p><b>Zero Storage Duplication:</b> Utilizes native NTFS hardlinks so staging folders consume zero extra storage space on your drive.</p>"
-            f"<p><b>Deterministic Sequential Splits:</b> Preserves alphabetical and directory order across volumes for straightforward data restoration.</p>"
-            f"<p><b>Index Report Export:</b> Generates structured text index reports detailing the exact volume allocation and file paths across the entire backup set.</p>"
+            f"<p><b>4-Step Workflow Grid:</b> Intuitive sequential interface guiding you from pre-burn simulation to post-burn cleanup.</p>"
+            f"<p><b>Source Purge & Tail Protection:</b> Safely reclaims source disk space after burning while keeping leftover tail files intact for replenishment.</p>"
+            f"<p><b>Universal Unicode Cleanup Scripts:</b> Generates self-bootstrapping <code>.bat</code> scripts powered by PowerShell that seamlessly handle Asian characters, division slashes (<code>∕</code>), and special characters on Windows.</p>"
+            f"<p><b>Selective Index Export:</b> Export complete index reports or easily omit underfilled tail volumes with auto-recalculated summaries.</p>"
+            f"<p><b>Tail Capacity Warnings:</b> Real-time visual alerts (<code>[&lt; 70% Full]</code>) on underutilized volumes across both the simulation tree and main status label.</p>"
+            f"<p><b>Tier Volume Limits:</b> Enforce maximum volume counts per media tier (<code>0 = unlimited</code>), automatically stepping down to fallback media.</p>"
+            f"<p><b>Zero Storage Duplication:</b> Native NTFS hardlinks allow staging multi-disc sets without using additional hard drive storage.</p>"
             f"<h2>DEPENDENCIES</h2>"
             f"<p><b>Python:</b> Built with Python 3.14.5.</p>"
             f"<p><b>PyQt6:</b> Orchestrates the graphical user interface.</p>"
@@ -1196,7 +1411,7 @@ class VolumeSpanApp(QMainWindow):
         """)
         
         about_text = (
-            f"<h1>VolumeSpan v{APP_VERSION}</h1>"
+            f"<h1><a href=\"https://git.disroot.org/pwshAgyjkcrg761/volumespan-py\">VolumeSpan</a> v{APP_VERSION}</h1>"
             "<p>Copyright (C) 2026 <b>pwshAgyjkcrg761</b><br>"
             "Licensed under <b>GPLv3</b></p>"
             "<p>This program is free software: you can redistribute it and/or modify "
@@ -1211,7 +1426,7 @@ class VolumeSpanApp(QMainWindow):
             "<hr>"
             "<p><b>Icon Credits:</b><br>"
             "'Compact Disc Cd SVG Vector' via <a href=\"https://www.svgrepo.com/svg/224282/compact-disc-cd\">SVGRepo</a>.<br>"
-            "Used under CC0 License. Modified by pwshAgyjkcrg761.</p>"
+            "Used under <a href=\"https://creativecommons.org/publicdomain/zero/1.0/\">CC0 License</a>. Modified by pwshAgyjkcrg761.</p>"
         )
         text_browser.setHtml(about_text)
         layout.addWidget(text_browser)
