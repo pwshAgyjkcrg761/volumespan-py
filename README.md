@@ -19,9 +19,12 @@ Key operational features include:
 3. **USB Flash & Custom Nominal Sizing:** Automatically calculates real-world safe Windows usable capacities (GiB) from manufacturer decimal ratings (MB / GB) for flash drives and custom storage, compensating for filesystem structures and binary conversion.
 4. **Multi-Tier Media Fallbacks:** Configure a primary media target alongside up to three smaller fallback tiers (such as BD-R 25 GB, DVD-9, or USB Flash Drives). When the final tail volume or small initial dataset fits within a smaller tier, VolumeSpan™ automatically steps down the volume size to conserve higher-capacity media.
 5. **Deterministic Sequential Partitioning:** Files are processed and allocated in strict directory and alphabetical order. This ensures predictable volume spans and simple restoration (copying volumes sequentially back into a single folder).
-6. **Interactive Simulation & Index Export:** Runs an in-depth simulation displaying an interactive tree view of every volume, relative paths, file sizes, media types, and capacity fill percentages before staging. Includes a **Save As Index** feature to export a formatted `.txt` report of the partitioned structures with suggested disc ID ranges.
-7. **Safe Staging Target Cleanup:** Includes a specialized cleanup utility that traverses staging targets bottom-up, verifying that file link counts are greater than 1 (`st_nlink > 1`) before unlinking. Standalone, non-hardlinked files (`st_nlink == 1`) are strictly preserved to prevent accidental data loss.
-8. **Robust Volume & Path Validation:** Enforces strict validation to prevent staging inside the source directory, blocks cross-volume partitioning, and prevents operations across network shares (UNC paths) and mapped network drives.
+6. **Interactive Simulation & Free Space Analysis:** Runs an in-depth pre-staging simulation displaying an interactive tree view with file sizes, remaining free space per volume, media tiers, and capacity fill percentages. Underutilized volumes (< 70% full) are visually alerted in red with a `[< 70% Full]` badge.
+7. **Selective Index Reporting:** Export formatted `.txt` catalog reports across the entire backup set using **Save As Index**, or use **Save Index (Exclude Tail)** to catalog only completed volumes while excluding partial tail sets, automatically recalculating volume totals and data metrics.
+8. **Tail Volume Tracking & Replenishment:** Real-time main window status tracking displays the exact size and remaining free space of the final staged volume (e.g., `(1.42 GiB / 21.78 GiB) [< 70% Full]`), making it easy to identify partial tail discs ready for replenishment in subsequent batches.
+9. **Safe Staging Target Cleanup:** Includes a specialized cleanup utility that traverses staging targets bottom-up, verifying that file link counts are greater than 1 (`st_nlink > 1`) before unlinking. Standalone, non-hardlinked files (`st_nlink == 1`) are strictly preserved to prevent accidental data loss.
+10. **Source Purging & Universal Batch Generator:** Safely reclaims disk space on full source drives by permanently deleting files belonging to completed/burned volumes while strictly preserving unburned tail volume files. Features direct in-app native Python deletion as well as an exportable, self-bootstrapping Windows `.bat` script powered by PowerShell that flawlessly handles Unicode, Asian characters, division slashes (`∕`), and explicit `(Y/N)` safety prompts.
+11. **Robust Volume & Path Validation:** Enforces strict validation to prevent staging inside the source directory, blocks cross-volume partitioning, and prevents operations across network shares (UNC paths) and mapped network drives.
 
 ---
 
@@ -29,14 +32,15 @@ Key operational features include:
 
 | Option | Description |
 | :--- | :--- |
-| **Disc ID Tracking** | Defines the starting label (e.g., `BD-0001`) and automatically increments numerical suffixes across volumes while displaying the last generated ID. |
-| **Primary Media & Sizing** | Sets the primary media preset (BDXL, BD-R, DVD, CD, USB Flash Drive, or Custom). Standard optical presets automatically apply strict sector safe margins. |
-| **Nominal Size Auto-Calculation** | For USB Flash Drives and Custom sizes, calculates safe Windows usable ceilings (GiB) from entered manufacturer nominal capacities (MB or GB). |
-| **Tier Volume Limits** | Sets the maximum number of volumes allowed for any tier (where `0` represents unlimited). Discs automatically spill into available fallback tiers once limits are reached. |
-| **Multi-Tier Fallbacks** | Configures up to three fallback media tiers with custom capacity thresholds and quotas for automated tail-volume optimization. |
-| **Dry Run Simulation & Index** | Scans source folders, opens an interactive report detailing volume counts and file allocations, and allows exporting structured index text files (`.txt`) of the partitioned set. |
-| **Hardlink Backup Generation** | Instantly constructs the volume directory hierarchy and NTFS hardlinks in the staging folder ready for direct burning or disk transfer. |
-| **Clean Staging Target** | Safely removes generated staging folders and unlinks hardlink copies while protecting original standalone files. |
+| **Disc ID & Tail Tracking** | Defines the starting label (e.g., `BD-0001`), automatically increments volume numbers, and tracks tail volume capacity `(Used / Free)` with real-time `[< 70% Full]` alerts. |
+| **Primary Media & Sizing** | Sets the primary media preset (BDXL, BD-R, DVD, CD, USB Flash Drive, or Custom) with automatic sector safety margins and responsive 4K horizontal expansion. |
+| **Nominal Size Calculation** | For USB Flash Drives and Custom sizes, auto-calculates safe Windows usable ceilings (GiB) from manufacturer decimal capacities (MB or GB). |
+| **Tier Volume Limits** | Sets the maximum volume quota per tier (`0` = unlimited), automatically stepping down subsequent discs to active fallback media once limits are reached. |
+| **Multi-Tier Fallbacks** | Configures up to three fallback media tiers with custom capacity thresholds and quotas for automated tail-volume conservation. |
+| **1. Run Simulation (Dry Run)** | Interactive allocation breakdown displaying file sizes, remaining free space, media tiers, `< 70% Full` alerts, and dual export options (**Save As Index** and **Save Index (Exclude Tail)**). |
+| **2. Generate Hardlinks** | Instantly constructs volume folder hierarchies and zero-byte NTFS hardlinks in the staging folder ready for direct disc authoring or copy. |
+| **3. Clean Staging Target** | Safely removes staging directory trees and unlinks hardlinks after burning while strictly preserving original standalone files. |
+| **4. Purge Burned Source** | Safely deletes completed volume files from the source drive (pruning empty folders) while strictly preserving unburned tail volume files. Supports direct Python purge and universal, Unicode-safe `.bat` exports. |
 | **Theme Engine** | Supports Dark, Light, and System-synced UI modes via a custom QPalette implementation. |
 
 ---
@@ -67,4 +71,4 @@ This software is released under the **GNU General Public License v3**.
 ---
 > **Document Control**<br>
 > *This document is up-to-date with the following version of VolumeSpan™.*<br>
-> *2026.09.18__19.11.14*
+> *2026.10.02__14.36.16*
