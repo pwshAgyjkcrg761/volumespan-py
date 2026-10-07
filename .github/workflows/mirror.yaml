@@ -21,6 +21,7 @@ jobs:
       - name: Force Mirror from Disroot
         env:
           GH_TOKEN: ${{ secrets.MIRROR_KEY }}
+          DISROOT_TOKEN: ${{ secrets.PUBLICREPOACCESSFORGITHUB }}
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
@@ -29,7 +30,7 @@ jobs:
           git tag -l | xargs -r git tag -d
 
           # 2. Fetch all branches and tags from Disroot
-          git remote add disroot https://git.disroot.org/pwshAgyjkcrg761/volumespan-py.git
+          git remote add disroot https://${DISROOT_TOKEN}@git.disroot.org/pwshAgyjkcrg761/volumespan-py.git
           git fetch disroot --tags --force
 
           # 3. Align main branch
@@ -49,7 +50,7 @@ jobs:
 
           # 6. Sync Releases and custom assets from Disroot to GitHub
           DISROOT_API="https://git.disroot.org/api/v1/repos/pwshAgyjkcrg761/volumespan-py/releases"
-          RELEASES_JSON=$(curl -sSL "$DISROOT_API" || echo "[]")
+          RELEASES_JSON=$(curl -sSL -H "Authorization: token $DISROOT_TOKEN" "$DISROOT_API" || echo "[]")
 
           if echo "$RELEASES_JSON" | jq -e 'if type=="array" then . else empty end' >/dev/null 2>&1; then
             echo "$RELEASES_JSON" | jq -c '.[]' | while read -r rel; do
@@ -68,7 +69,7 @@ jobs:
 
                 while read -r asset_url asset_name; do
                   if [ -n "$asset_url" ] && [ -n "$asset_name" ]; then
-                    curl -sSL "$asset_url" -o "$TMP_DIR/$asset_name"
+                    curl -sSL -H "Authorization: token $DISROOT_TOKEN" "$asset_url" -o "$TMP_DIR/$asset_name"
                     ASSET_ARGS+=("$TMP_DIR/$asset_name")
                   fi
                 done < <(echo "$rel" | jq -r '.assets[]? | "\(.browser_download_url) \(.name)"')
