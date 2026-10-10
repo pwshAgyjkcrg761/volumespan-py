@@ -1,6 +1,6 @@
 # ==============================================================================
 # SCRIPT: VolumeSpan.py
-# VERSION: 2026.10.02__14.36.16
+# VERSION: 2026.10.10__14.04.59
 # TARGET: Python 3.14.5
 #
 # Copyright (C) 2026 pwshAgyjkcrg761
@@ -73,10 +73,11 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QPushButton, QFileDialog, QLineEdit, QLabel, 
                              QMessageBox, QDialog, QComboBox, QDoubleSpinBox, QSpinBox,
-                             QTextBrowser, QDialogButtonBox, QTreeWidget, QTreeWidgetItem)
+                             QTextBrowser, QDialogButtonBox, QTreeWidget, QTreeWidgetItem,
+                             QCheckBox)
 from PyQt6.QtGui import QActionGroup, QPalette, QColor, QIcon
 
-APP_VERSION = "2026.10.02__14.36.16"
+APP_VERSION = "2026.10.10__14.04.59"
 
 def increment_disc_id(disc_id: str) -> str:
     match = re.search(r'(.*?)(\d+)$', disc_id)
@@ -85,6 +86,27 @@ def increment_disc_id(disc_id: str) -> str:
     prefix, number_str = match.groups()
     new_number = int(number_str) + 1
     return f"{prefix}{new_number:0{len(number_str)}d}"
+
+def validate_udf_path(rel_path: str, disc_id: str = "", max_path: int = 259) -> tuple[bool, str]:
+    full_disc_path = f"{disc_id}\\{rel_path}" if disc_id else rel_path
+    norm_path = full_disc_path.replace("/", "\\")
+    if len(norm_path) > max_path:
+        return False, f"Total path on disc exceeds {max_path} chars ({len(norm_path)} chars)"
+    
+    parts = norm_path.split("\\")
+    for part in parts:
+        if not part:
+            continue
+        has_asian_chars = any(ord(c) > 255 for c in part)
+        max_part_len = 127 if has_asian_chars else 254
+        if len(part) > max_part_len:
+            char_type = "Unicode/Asian" if has_asian_chars else "ASCII"
+            return False, f"Name exceeds {char_type} limit of {max_part_len} chars ({len(part)} chars)"
+    return True, ""
+
+def is_optical_media(media_name: str) -> bool:
+    lower_name = media_name.lower()
+    return not ("usb" in lower_name or "flash" in lower_name or "custom" in lower_name)
 
 class SettingsWrapper:
     def __init__(self, config_path):
@@ -752,34 +774,68 @@ class VolumeSpanApp(QMainWindow):
         tree.setColumnWidth(2, 95)
 
         total_bytes = 0
+        has_udf_errors = False
+        enforce_udf = self.settings.value("enforce_udf_paths", True)
 
         for d in discs:
             disc_item = QTreeWidgetItem(tree)
             pct = (d["size"] / d["ceiling"]) * 100 if d["ceiling"] > 0 else 0.0
             media_name = self._get_media_name_from_ceiling(d["ceiling"])
             free_gib = max(0.0, (d["ceiling"] - d["size"]) / (1024**3))
+            is_optical = is_optical_media(media_name)
             warn_tag = " [< 70% Full]" if pct < 70.0 else ""
-            disc_item.setText(0, f"{d['label']} ({len(d['files'])} files) - {pct:.1f}% filled{warn_tag}")
+            
+            # Check files for UDF violations if optical media and setting enabled
+            file_error_map = {}
+            if enforce_udf and is_optical:
+                for rel_p, _, _ in d["files"]:
+                    is_valid, err_msg = validate_udf_path(rel_p, disc_id=d["label"])
+                    if not is_valid:
+                        file_error_map[rel_p] = err_msg
+
+            disc_bad_files = len(file_error_map)
+            if disc_bad_files > 0:
+                has_udf_errors = True
+                error_tag = f" (UDF PATH ERROR: {disc_bad_files} file(s) exceed limits)"
+            else:
+                error_tag = ""
+
+            disc_item.setText(0, f"{d['label']} ({len(d['files'])} files) - {pct:.1f}% filled{error_tag}{warn_tag}")
             disc_item.setText(1, f"{d['size'] / (1024**3):.2f} GiB")
             disc_item.setText(2, f"{free_gib:.2f} GiB")
             disc_item.setText(3, media_name)
 
-            if pct < 70.0:
+            if pct < 70.0 or disc_bad_files > 0:
                 for col in range(4):
                     disc_item.setForeground(col, QColor("#e04848"))
+
+            if disc_bad_files > 0:
+                disc_item.setExpanded(True)
 
             total_bytes += d["size"]
 
             for rel_path, _, fsize in d["files"]:
                 file_item = QTreeWidgetItem(disc_item)
-                file_item.setText(0, rel_path)
+                if rel_path in file_error_map:
+                    file_item.setText(0, f"{rel_path} [{file_error_map[rel_path]}]")
+                    for col in range(4):
+                        file_item.setForeground(col, QColor("#e04848"))
+                else:
+                    file_item.setText(0, rel_path)
                 file_item.setText(1, f"{fsize / (1024**2):.2f} MiB")
                 file_item.setText(2, "")
                 file_item.setText(3, "")
 
         d_layout.addWidget(tree)
         
-        summary_label = QLabel(f"Total Discs: {len(discs)} | Total Data: {total_bytes / (1024**3):.2f} GiB")
+        if has_udf_errors:
+            summary_label = QLabel(
+                f"Total Discs: {len(discs)} | Total Data: {total_bytes / (1024**3):.2f} GiB\n"
+                "ERROR: UDF path limit violations detected! Index export and backup generation are locked."
+            )
+            summary_label.setStyleSheet("color: #e04848; font-weight: bold;")
+        else:
+            summary_label = QLabel(f"Total Discs: {len(discs)} | Total Data: {total_bytes / (1024**3):.2f} GiB")
         d_layout.addWidget(summary_label)
 
         def save_index(exclude_tail=False):
@@ -823,15 +879,70 @@ class VolumeSpanApp(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(dialog, "Error Saving Index", f"An error occurred while saving the index report:\n{e}")
 
+        def save_udf_errors():
+            error_records = []
+            for d in discs:
+                media_name = self._get_media_name_from_ceiling(d["ceiling"])
+                if is_optical_media(media_name):
+                    disc_errs = []
+                    for rel_p, _, _ in d["files"]:
+                        is_valid, err_msg = validate_udf_path(rel_p, disc_id=d["label"])
+                        if not is_valid:
+                            disc_errs.append((rel_p, err_msg))
+                    if disc_errs:
+                        error_records.append((d["label"], disc_errs))
+
+            if not error_records:
+                return
+
+            total_err_count = sum(len(errs) for _, errs in error_records)
+            if len(discs) == 1:
+                suggested_filename = f"UDF ERRORS {discs[0]['label']}.txt"
+            else:
+                suggested_filename = f"UDF ERRORS {discs[0]['label']} - {discs[-1]['label']}.txt"
+
+            default_save_path = os.path.join(self.target_directory, suggested_filename)
+            file_path, _ = QFileDialog.getSaveFileName(
+                dialog, "Save UDF Error Report", default_save_path, "Text Files (*.txt);;All Files (*)"
+            )
+            if not file_path:
+                return
+
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write("=" * 80 + "\n")
+                    f.write("VOLUMESPAN - UDF PATH VIOLATION REPORT\n")
+                    f.write(f"Total Errors: {total_err_count} file(s)\n")
+                    f.write(f"Source: {self.source_directory}\n")
+                    f.write("=" * 80 + "\n\n")
+
+                    for disc_lbl, errs in error_records:
+                        f.write(f"[{disc_lbl}] - {len(errs)} violation(s)\n")
+                        f.write("-" * 80 + "\n")
+                        for rel_p, err_msg in errs:
+                            f.write(f"• {rel_p}\n")
+                            f.write(f"  Reason: {err_msg}\n\n")
+
+                QMessageBox.information(dialog, "Error Report Saved", f"UDF error report successfully saved to:\n{file_path}")
+            except Exception as e:
+                QMessageBox.critical(dialog, "Error Saving Report", f"An error occurred while saving the report:\n{e}")
+
         btn_layout = QHBoxLayout()
         btn_save_index = QPushButton("Save As Index")
+        btn_save_index.setEnabled(not has_udf_errors)
         btn_save_index.clicked.connect(lambda: save_index(exclude_tail=False))
         btn_layout.addWidget(btn_save_index)
 
         btn_save_index_no_tail = QPushButton("Save Index (Exclude Tail)")
-        btn_save_index_no_tail.setEnabled(len(discs) > 1)
+        btn_save_index_no_tail.setEnabled((not has_udf_errors) and (len(discs) > 1))
         btn_save_index_no_tail.clicked.connect(lambda: save_index(exclude_tail=True))
         btn_layout.addWidget(btn_save_index_no_tail)
+
+        btn_save_udf = QPushButton("Save UDF Error Report")
+        btn_save_udf.setVisible(has_udf_errors)
+        btn_save_udf.clicked.connect(save_udf_errors)
+        btn_layout.addWidget(btn_save_udf)
+
         btn_layout.addStretch()
 
         btn_close = QPushButton("Close Report")
@@ -849,6 +960,28 @@ class VolumeSpanApp(QMainWindow):
         discs = self.calculate_discs()
         if not discs:
             return
+
+        if self.settings.value("enforce_udf_paths", True):
+            udf_errors = []
+            for d in discs:
+                media_name = self._get_media_name_from_ceiling(d["ceiling"])
+                if is_optical_media(media_name):
+                    for rel_p, _, _ in d["files"]:
+                        is_valid, err_msg = validate_udf_path(rel_p, disc_id=d["label"])
+                        if not is_valid:
+                            udf_errors.append(f"• [{d['label']}] {rel_p}")
+            if udf_errors:
+                preview = "\n".join(udf_errors[:5])
+                extra = f"\n... and {len(udf_errors) - 5} more file(s)" if len(udf_errors) > 5 else ""
+                QMessageBox.critical(
+                    self,
+                    "UDF Path Limit Violation - Execution Blocked",
+                    f"Cannot generate backup trees.\n\n"
+                    f"{len(udf_errors)} file(s) exceed UDF path length constraints for optical discs:\n\n"
+                    f"{preview}{extra}\n\n"
+                    f"Please run 'Run Simulation (Dry Run)' to view all highlighted files and rename them or shorten their paths."
+                )
+                return
 
         reply = QMessageBox.question(self, "Confirm Staging Execution", 
                                      f"Ready to create hardlinks for {len(discs)} disc volume(s) in:\n{self.target_directory}\n\nProceed?",
@@ -1253,12 +1386,45 @@ class VolumeSpanApp(QMainWindow):
         for action in self.theme_group.actions():
             if action.text() == saved_theme:
                 action.setChecked(True)
+                
+        tools_menu.addSeparator()
+        pref_action = tools_menu.addAction("&Preferences...")
+        pref_action.triggered.connect(self.show_preferences)
         
         help_menu = menu_bar.addMenu("&Help")
         manual_action = help_menu.addAction("Manual")
         manual_action.triggered.connect(self.show_manual)
         about_action = help_menu.addAction("About")
         about_action.triggered.connect(self.show_about)
+
+    def show_preferences(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Preferences")
+        dialog.setFixedWidth(480)
+        d_layout = QVBoxLayout(dialog)
+        d_layout.setSpacing(12)
+
+        chk_udf = QCheckBox("Enforce UDF Path Length Limits (Optical Discs)")
+        is_enforced = self.settings.value("enforce_udf_paths", True)
+        chk_udf.setChecked(bool(is_enforced))
+        d_layout.addWidget(chk_udf)
+
+        lbl_desc = QLabel(
+            "Validates directory and file path lengths against optical disc UDF specifications "
+            "(259 chars total path, 254 chars ASCII names, 127 chars Unicode/Asian names).\n\n"
+            "When violations are found, staging hardlinks and index saving are locked until resolved."
+        )
+        lbl_desc.setWordWrap(True)
+        lbl_desc.setStyleSheet("color: #888888; font-size: 11px;")
+        d_layout.addWidget(lbl_desc)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        d_layout.addWidget(buttons)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.settings.setValue("enforce_udf_paths", chk_udf.isChecked())
 
     def apply_theme(self, theme_name):
         app = QApplication.instance()
@@ -1357,12 +1523,15 @@ class VolumeSpanApp(QMainWindow):
             f"<p>VolumeSpan is an automated optical disc and removable media staging utility designed to partition local directory trees sequentially into fixed-capacity volumes (e.g., <b>BD-0001</b>, <b>BD-0002</b>) using native NTFS hardlinks.</p>"
             f"<h2>USAGE WORKFLOW</h2>"
             f"<div class='step-card'><b>1. Select Source & Staging Target:</b> Choose the source folder to archive and a staging folder on the <b>same local drive volume</b>.</div>"
-            f"<div class='step-card'><b>2. Configure Media, Limits & Fallbacks:</b> Select your primary media and optional fallback tiers for tail volumes. Set a volume count limit per tier (<code>0</code> for unlimited). For USB Flash Drives or Custom sizes, enter manufacturer ratings (MB/GB) to auto-calculate the safe usable ceiling.</div>"
-            f"<div class='step-card'><b>3. Step 1 — Run Simulation (Dry Run):</b> Inspect the allocation breakdown, including used capacity, remaining free space, and media tiers. Underfilled volumes (&lt; 70% full) are highlighted in red with a <code>[&lt; 70% Full]</code> indicator. Use <b>Save As Index</b> or <b>Save Index (Exclude Tail)</b> to export catalog text files.</div>"
-            f"<div class='step-card'><b>4. Step 2 — Generate Hardlink Backup Trees:</b> Creates zero-byte NTFS hardlink folders ready for burning. The <b>Last Disc ID Created</b> indicator tracks the final volume's size, free space, and fill warnings.</div>"
+            f"<div class='step-card'><b>2. Configure Media, Limits & Preferences:</b> Select primary media and optional fallbacks. Set volume limits (<code>0</code> for unlimited). Under <b>Tools &gt; Preferences</b>, toggle <b>Enforce UDF Path Length Limits</b> to safeguard optical disc burns against filesystem truncation.</div>"
+            f"<div class='step-card'><b>3. Step 1 — Run Simulation (Dry Run):</b> Inspect volume allocations and free space. Underfilled volumes (&lt; 70% full) display <code>[&lt; 70% Full]</code> in red. If UDF enforcement is active and paths exceed limits, volumes and offending files are highlighted in red with <code>(UDF PATH ERROR)</code> tags, index exports and staging are locked, and the <b>Save UDF Error Report</b> button appears.</div>"
+            f"<div class='step-card'><b>4. Step 2 — Generate Hardlink Backup Trees:</b> Creates zero-byte NTFS hardlink folders ready for burning. The <b>Last Disc ID Created</b> indicator tracks the final volume's size, free space, and fill warnings. Generation is automatically blocked if UDF violations are unresolved.</div>"
             f"<div class='step-card'><b>5. Step 3 — Clean Staging Target:</b> Safely removes staging hardlinks after burning. Non-hardlinked files and source data are strictly preserved.</div>"
             f"<div class='step-card'><b>6. Step 4 — Purge Burned Files from Source:</b> Deletes verified source files for completed volumes while strictly preserving unburned tail volume files. Choose direct in-app Python deletion or export a double-clickable, Unicode-safe <code>.bat</code> script with explicit <code>(Y/N)</code> confirmation.</div>"
             f"<h2>CORE FEATURES</h2>"
+            f"<p><b>UDF Path Compliance & Asian Text Validation:</b> Enforces optical disc constraints (259 chars total path including disc ID, 254 chars ASCII names, and 127 chars for 16-bit Unicode/Asian text such as Katakana, Hiragana, and Kanji). Protects against burning errors and disc corruption.</p>"
+            f"<p><b>Actionable UDF Error Reporting:</b> Export formatted error logs (<code>UDF ERRORS &lt;Range&gt;.txt</code>) detailing exact relative paths and reasons to easily find and rename offending files.</p>"
+            f"<p><b>Safety Interlocks:</b> Prevents staging and index export whenever UDF path violations exist, guaranteeing uncorrupted staging trees.</p>"
             f"<p><b>4-Step Workflow Grid:</b> Intuitive sequential interface guiding you from pre-burn simulation to post-burn cleanup.</p>"
             f"<p><b>Source Purge & Tail Protection:</b> Safely reclaims source disk space after burning while keeping leftover tail files intact for replenishment.</p>"
             f"<p><b>Universal Unicode Cleanup Scripts:</b> Generates self-bootstrapping <code>.bat</code> scripts powered by PowerShell that seamlessly handle Asian characters, division slashes (<code>∕</code>), and special characters on Windows.</p>"
