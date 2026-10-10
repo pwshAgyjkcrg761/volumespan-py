@@ -1,6 +1,6 @@
 # ==============================================================================
 # SCRIPT: VolumeSpan.py
-# VERSION: 2026.10.10__14.04.59
+# VERSION: 2026.10.10__15.37.16
 # TARGET: Python 3.14.5
 #
 # Copyright (C) 2026 pwshAgyjkcrg761
@@ -77,7 +77,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QCheckBox)
 from PyQt6.QtGui import QActionGroup, QPalette, QColor, QIcon
 
-APP_VERSION = "2026.10.10__14.04.59"
+APP_VERSION = "2026.10.10__15.37.16"
 
 def increment_disc_id(disc_id: str) -> str:
     match = re.search(r'(.*?)(\d+)$', disc_id)
@@ -87,20 +87,20 @@ def increment_disc_id(disc_id: str) -> str:
     new_number = int(number_str) + 1
     return f"{prefix}{new_number:0{len(number_str)}d}"
 
-def validate_udf_path(rel_path: str, disc_id: str = "", max_path: int = 259) -> tuple[bool, str]:
+def validate_udf_path(rel_path: str, disc_id: str = "", max_path: int = 511) -> tuple[bool, str]:
     full_disc_path = f"{disc_id}\\{rel_path}" if disc_id else rel_path
     norm_path = full_disc_path.replace("/", "\\")
     if len(norm_path) > max_path:
         return False, f"Total path on disc exceeds {max_path} chars ({len(norm_path)} chars)"
     
+    path_has_unicode = any(ord(c) > 127 for c in norm_path)
     parts = norm_path.split("\\")
     for part in parts:
         if not part:
             continue
-        has_asian_chars = any(ord(c) > 255 for c in part)
-        max_part_len = 127 if has_asian_chars else 254
+        max_part_len = 127 if path_has_unicode else 254
         if len(part) > max_part_len:
-            char_type = "Unicode/Asian" if has_asian_chars else "ASCII"
+            char_type = "Unicode" if path_has_unicode else "ASCII"
             return False, f"Name exceeds {char_type} limit of {max_part_len} chars ({len(part)} chars)"
     return True, ""
 
@@ -1411,7 +1411,7 @@ class VolumeSpanApp(QMainWindow):
 
         lbl_desc = QLabel(
             "Validates directory and file path lengths against optical disc UDF specifications "
-            "(259 chars total path, 254 chars ASCII names, 127 chars Unicode/Asian names).\n\n"
+            "(511 chars total path, 254 chars ASCII names, 127 chars Unicode names).\n\n"
             "When violations are found, staging hardlinks and index saving are locked until resolved."
         )
         lbl_desc.setWordWrap(True)
@@ -1529,7 +1529,7 @@ class VolumeSpanApp(QMainWindow):
             f"<div class='step-card'><b>5. Step 3 — Clean Staging Target:</b> Safely removes staging hardlinks after burning. Non-hardlinked files and source data are strictly preserved.</div>"
             f"<div class='step-card'><b>6. Step 4 — Purge Burned Files from Source:</b> Deletes verified source files for completed volumes while strictly preserving unburned tail volume files. Choose direct in-app Python deletion or export a double-clickable, Unicode-safe <code>.bat</code> script with explicit <code>(Y/N)</code> confirmation.</div>"
             f"<h2>CORE FEATURES</h2>"
-            f"<p><b>UDF Path Compliance & Asian Text Validation:</b> Enforces optical disc constraints (259 chars total path including disc ID, 254 chars ASCII names, and 127 chars for 16-bit Unicode/Asian text such as Katakana, Hiragana, and Kanji). Protects against burning errors and disc corruption.</p>"
+            f"<p><b>UDF Path Compliance & Asian Text Validation:</b> Enforces optical disc constraints (511 chars total path including disc ID, 254 chars ASCII names, and 127 chars for Unicode paths). Protects against burning errors and disc corruption.</p>"
             f"<p><b>Actionable UDF Error Reporting:</b> Export formatted error logs (<code>UDF ERRORS &lt;Range&gt;.txt</code>) detailing exact relative paths and reasons to easily find and rename offending files.</p>"
             f"<p><b>Safety Interlocks:</b> Prevents staging and index export whenever UDF path violations exist, guaranteeing uncorrupted staging trees.</p>"
             f"<p><b>4-Step Workflow Grid:</b> Intuitive sequential interface guiding you from pre-burn simulation to post-burn cleanup.</p>"
