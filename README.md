@@ -25,6 +25,7 @@ Key operational features include:
 9. **Safe Staging Target Cleanup:** Includes a specialized cleanup utility that traverses staging targets bottom-up, verifying that file link counts are greater than 1 (`st_nlink > 1`) before unlinking. Standalone, non-hardlinked files (`st_nlink == 1`) are strictly preserved to prevent accidental data loss.
 10. **Source Purging & Universal Batch Generator:** Safely reclaims disk space on full source drives by permanently deleting files belonging to completed/burned volumes while strictly preserving unburned tail volume files. Features direct in-app native Python deletion as well as an exportable, self-bootstrapping Windows `.bat` script powered by PowerShell that flawlessly handles Unicode, Asian characters, division slashes (`∕`), and explicit `(Y/N)` safety prompts.
 11. **Robust Volume & Path Validation:** Enforces strict validation to prevent staging inside the source directory, blocks cross-volume partitioning, and prevents operations across network shares (UNC paths) and mapped network drives.
+12. **UDF Path Compliance & Error Reporting:** Validates optical disc volume allocations against UDF filesystem limits (259-character total path including disc ID folder, 254-character ASCII names, and 127-character limits for 16-bit Unicode/Asian text including Katakana, Hiragana, and Kanji). Flags violating paths in red down to the individual file, locks staging and index generation, and exports dedicated `UDF ERRORS <Range>.txt` reports for renaming.
 
 ---
 
@@ -37,8 +38,9 @@ Key operational features include:
 | **Nominal Size Calculation** | For USB Flash Drives and Custom sizes, auto-calculates safe Windows usable ceilings (GiB) from manufacturer decimal capacities (MB or GB). |
 | **Tier Volume Limits** | Sets the maximum volume quota per tier (`0` = unlimited), automatically stepping down subsequent discs to active fallback media once limits are reached. |
 | **Multi-Tier Fallbacks** | Configures up to three fallback media tiers with custom capacity thresholds and quotas for automated tail-volume conservation. |
-| **1. Run Simulation (Dry Run)** | Interactive allocation breakdown displaying file sizes, remaining free space, media tiers, `< 70% Full` alerts, and dual export options (**Save As Index** and **Save Index (Exclude Tail)**). |
-| **2. Generate Hardlinks** | Instantly constructs volume folder hierarchies and zero-byte NTFS hardlinks in the staging folder ready for direct disc authoring or copy. |
+| **Preferences & UDF Enforcement** | Configures optical disc filesystem limits under **Tools > Preferences** (259-char path with disc ID, 254-char ASCII names, 127-char Asian/Unicode names). |
+| **1. Run Simulation (Dry Run)** | Interactive allocation breakdown displaying file sizes, remaining free space, media tiers, `< 70% Full` alerts, UDF violation alerts, conditional **Save UDF Error Report** exports, and dual index options (**Save As Index** / **Save Index (Exclude Tail)**). |
+| **2. Generate Hardlinks** | Instantly constructs volume folder hierarchies and zero-byte NTFS hardlinks in the staging folder ready for disc authoring or copy. Automatically locked if UDF errors exist. |
 | **3. Clean Staging Target** | Safely removes staging directory trees and unlinks hardlinks after burning while strictly preserving original standalone files. |
 | **4. Purge Burned Source** | Safely deletes completed volume files from the source drive (pruning empty folders) while strictly preserving unburned tail volume files. Supports direct Python purge and universal, Unicode-safe `.bat` exports. |
 | **Theme Engine** | Supports Dark, Light, and System-synced UI modes via a custom QPalette implementation. |
@@ -71,4 +73,4 @@ This software is released under the **GNU General Public License v3**.
 ---
 > **Document Control**<br>
 > *This document is up-to-date with the following version of VolumeSpan™.*<br>
-> *2026.10.02__14.36.16*
+> *2026.10.10__14.04.59*
